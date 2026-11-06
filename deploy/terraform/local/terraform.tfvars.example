@@ -1,0 +1,11 @@
+# cp terraform.tfvars.example terraform.tfvars   (terraform.tfvars is git-ignored; never commit secrets)
+jwt_issuer_uri = "https://idp.example.org/realms/dpi"
+es_uris        = "https://host.docker.internal:9200"
+# es_username = ""
+# es_password = ""
+# es_api_key  = ""
+chat_model      = "llama3.1:8b"   # or mistral:7b — verify the tag in your Ollama registry
+embedding_model = "bge-m3"
+# build_local_image = false
+# app_image         = "<dockerhub-user>/dpi-log-analysis:latest"
+# ollama_gpu        = true

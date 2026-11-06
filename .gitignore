@@ -5,3 +5,11 @@ target/
 .vscode/
 .env
 *.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.auto.tfvars
+crash.log

@@ -26,6 +26,7 @@ Spring AI 2.0.2, Java 21, LangGraph4j 1.9.8, Elasticsearch client 8.19.24.
 | Evidence verification (Module 10), report generation (Module 11) | Implemented, tested via graph tests | Deterministic verifier; report is data only, REST exposure in Phase 5. Review decision endpoint is in the REST row |
 | REST API, security, rate limiting, OpenAPI | Implemented; components unit-tested (14 tests) | Async analyses, report fetch, human review gate, knowledge ingest/validate, JWT+RBAC, per-instance rate limit, correlation ids, problem+json. Security filter chain and controllers never exercised in a running context |
 | LLM/retrieval/analysis/evidence metrics, JSON logging | Implemented | Metric names confirmed from a live scrape of the jar; distributed tracing NOT implemented |
+| CI pipeline (GitHub Actions), local Terraform IaC | Written; workflow actionlint-clean, test commands run locally; Terraform fmt+validate OK | Never ran on GitHub; image build/push, Trivy scan and `terraform apply` never executed. See `docs/CI-CD.md` |
 | Dockerfile, Compose, Kubernetes (Helm), Grafana | Written; chart linted, rendered (4 configs) and kubeconform-validated; jar boot-tested | Dockerfile and Compose never built/run (no Docker daemon); chart never installed in a cluster; dashboard JSON never imported into Grafana |
 | End-to-end scenarios | Implemented (6, scripted LLM) | Real graph/tools/pgvector; LLM and Elasticsearch are stubs |
 
@@ -37,7 +38,7 @@ Spring AI 2.0.2, Java 21, LangGraph4j 1.9.8, Elasticsearch client 8.19.24.
 4. Production PostgreSQL / pgvector versions, load and capacity behaviour (no performance test exists), a dependency CVE scan.
 5. Masking rules against real MOSIP/DPI log samples; durable resumable agent checkpoints and distributed tracing are not implemented.
 
-See `docs/OPERATIONS.md`, `docs/SECURITY-ASSESSMENT.md`, `docs/PERFORMANCE.md`, `docs/EMBEDDING-MIGRATION.md`,
+See `docs/CI-CD.md`, `docs/OPERATIONS.md`, `docs/SECURITY-ASSESSMENT.md`, `docs/PERFORMANCE.md`, `docs/EMBEDDING-MIGRATION.md`,
 `docs/ASSUMPTIONS.md` for design decisions and `docs/RAG-DESIGN.md` for the retrieval design.
 
 
