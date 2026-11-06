@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # NOT built in the authoring environment (no Docker daemon). Base image tags are not pinned by digest: pin them in CI.
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-26 AS build
 WORKDIR /src
 COPY pom.xml .
 RUN mvn -B -q dependency:go-offline
