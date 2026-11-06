@@ -28,6 +28,18 @@ spring:
     model:
       chat: ollama        # switch both to 'openai' to use an OpenAI-compatible vLLM server
       embedding: ollama
+      # only chat + embedding are used; the OpenAI starter would otherwise demand an API key for these
+      audio:
+        speech: none
+        transcription: none
+      image: none
+      moderation: none
+    retry:   # Spring AI defaults are 10 attempts with 5x backoff (minutes); keep model-call retries tightly bounded
+      max-attempts: 2
+      backoff:
+        initial-interval: 1s
+        multiplier: 2
+        max-interval: 5s
     ollama:
       base-url: ${DPI_OLLAMA_URL:http://ollama:11434}
       chat:

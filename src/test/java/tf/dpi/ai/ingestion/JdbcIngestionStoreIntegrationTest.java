@@ -15,10 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import org.junit.jupiter.api.condition.EnabledIf;
+import tf.dpi.ai.support.TestDatabase;
 import tf.dpi.ai.embedding.EmbeddedChunk;
 import tf.dpi.ai.embedding.EmbeddingProperties;
 import tf.dpi.ai.model.LogChunk;
@@ -28,12 +26,8 @@ import tf.dpi.ai.model.LogLevel;
  * Runs the real Flyway migration and JDBC store against PostgreSQL + pgvector. Skipped automatically when Docker is
  * not available (it was NOT executed in the authoring environment).
  */
-@Testcontainers(disabledWithoutDocker = true)
+@EnabledIf(value = "tf.dpi.ai.support.TestDatabase#available", disabledReason = "no Docker and DPI_TEST_JDBC_URL unset")
 class JdbcIngestionStoreIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
 
     static JdbcTemplate jdbc;
     static JdbcIngestionStore store;
@@ -41,9 +35,7 @@ class JdbcIngestionStoreIntegrationTest {
 
     @BeforeAll
     static void migrate() {
-        DriverManagerDataSource ds = new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(),
-                POSTGRES.getPassword());
-        Flyway.configure().dataSource(ds).load().migrate();
+        javax.sql.DataSource ds = TestDatabase.migrated();
         jdbc = new JdbcTemplate(ds);
         store = new JdbcIngestionStore(jdbc, new DataSourceTransactionManager(ds), new ObjectMapper(), EMBEDDING);
     }

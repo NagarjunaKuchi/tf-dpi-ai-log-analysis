@@ -43,3 +43,9 @@ is recorded here. None of these changes the approved architecture.
 30. A reviewer may approve their own submitted analysis; separation of duties is not enforced.
 31. A Jackson 2 `ObjectMapper` bean is declared for JDBC JSON and the ES client because Boot 4's MVC mapper is Jackson 3; two executor beans of the same type rely on parameter-name injection. Both unverified until the context is started.
 32. In-flight analyses are lost on restart (status stays RUNNING); there is no recovery job yet.
+
+## Phase 6 notes
+
+33. The agent timeout is checked between nodes only; one LLM call can overrun it by at most the capped Spring AI retry window plus the model's own read timeout. A hard per-call deadline is not implemented.
+34. Integration tests use pgvector 0.6.0; production should be validated on the actual pgvector version (HNSW options differ across releases).
+35. Tests use a deterministic hashing embedding model; they prove plumbing and filters, not semantic retrieval quality with BGE-M3.

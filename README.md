@@ -20,8 +20,8 @@ lacks). Stack: Spring Boot 4.0.9, Spring AI 2.0.2, Java 21, Elasticsearch client
 | JDBC store, Flyway schema, retention job, advisory-lock scheduler | Written | 6 integration tests written but **never executed**; SQL never run on PostgreSQL |
 | Spring application context / wiring | Written | **Never started** (needs PostgreSQL); `spring.ai.model.*` selection keys unverified |
 | Embedding model migration (re-embed on version change) | Pending | |
-| Runbook / incident knowledge ingestion (Module 7) | Implemented, unit-tested (chunker only) | Versioning, masking, UNVERIFIED-by-default, atomic supersession. SQL never run on a real PostgreSQL; no HTTP endpoint yet (Phase 5) |
-| Vector retrieval service (Spring AI `VectorStore`, filters) | Implemented, compiles | `VectorStoreDocumentRetriever` + metadata filters pinned to embedding model/version. Filter-to-SQL translation unverified (no Docker) |
+| Runbook / incident knowledge ingestion (Module 7) | Implemented; integration-tested on PostgreSQL 16 + pgvector 0.6.0 | Versioning, masking, UNVERIFIED-by-default, atomic supersession, validation. HTTP endpoints in Phase 5 row |
+| Vector retrieval service (Spring AI `VectorStore`, filters) | Implemented, compiles | `VectorStoreDocumentRetriever` + metadata filters pinned to embedding model/version. Service/level/time-overlap/embedding-model filters and similarity threshold verified against real pgvector with a fake embedding model (real model quality untested) |
 | LangGraph4j agent, nodes, tools (Modules 8-9) | Implemented, 6 graph tests with a fake LLM | 9 nodes, bounded loops, timeout, explicit failure outcome. Checkpoints are in-memory (`MemorySaver`); durable PostgreSQL saver still PENDING. `SpringAiAgentLlm` never run against a real model |
 | Evidence verification (Module 10), report generation (Module 11) | Implemented, tested via graph tests | Deterministic verifier; report is data only, REST exposure in Phase 5. Engineer-review decision endpoint pending |
 | REST API, security, rate limiting, OpenAPI | Implemented; components unit-tested (14 tests) | Async analyses, report fetch, human review gate, knowledge ingest/validate, JWT+RBAC, per-instance rate limit, correlation ids, problem+json. Security filter chain and controllers never exercised in a running context |
@@ -36,3 +36,19 @@ lacks). Stack: Spring Boot 4.0.9, Spring AI 2.0.2, Java 21, Elasticsearch client
 3. Phase 6: durable agent checkpoints, context-startup and controller/security integration tests, e2e scenarios, LLM/vector/agent metrics, JSON logging, tracing. Phase 7: Docker/K8s/Helm.
 
 See `docs/ASSUMPTIONS.md` for design decisions and `docs/RAG-DESIGN.md` for the retrieval design.
+
+
+## Running the tests
+
+- `mvn test` runs unit tests; database tests are skipped without Docker or a database.
+- Set `DPI_TEST_JDBC_URL` (plus `DPI_TEST_JDBC_USER`, `DPI_TEST_JDBC_PASSWORD`) to run all integration tests, including the full
+  Spring context test, against a disposable PostgreSQL with the pgvector extension. **The `public` schema is dropped and
+  re-migrated on every run.** Without that variable the tests use a Testcontainers pgvector container when Docker is available.
+- Last verified run: 108 tests, 0 failures, 0 skipped, on PostgreSQL 16.15 with pgvector 0.6.0 (Ubuntu packages). Not yet run on
+  the production PostgreSQL / pgvector versions, against real Elasticsearch 8.19.24, or against a real Ollama / vLLM model.
+
+## Defects found by integration testing (fixed)
+
+1. Ollama + OpenAI starters together made the context fail to start (OpenAI audio models need an API key): unused model types are now disabled.
+2. Spring AI's default model-call retry (10 attempts, 5x backoff) let one analysis run for minutes with the LLM down: capped at 2 attempts, max 5 s backoff.
+3. A JVM timezone id unknown to PostgreSQL (e.g. `Asia/Calcutta`) makes the JDBC connection fail: run the service with `-Duser.timezone=UTC` (tests do this via the pom).
