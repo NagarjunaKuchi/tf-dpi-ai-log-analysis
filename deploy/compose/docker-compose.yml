@@ -1,0 +1,57 @@
+# Local/dev stack. Elasticsearch and the identity provider are EXTERNAL (read-only access to the existing ELK, a JWT issuer you
+# operate). Not run in the authoring environment (no Docker daemon). Image tags are unverified; pin them.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: dpi
+      POSTGRES_USER: dpi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dpi -d dpi"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes: [ollama:/root/.ollama]
+    # GPU: uncomment the deploy block on a host with the NVIDIA container toolkit
+    # deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }
+
+  ollama-pull:   # one-shot model download; the app does not pull models itself
+    image: ollama/ollama:latest
+    depends_on: [ollama]
+    environment: { OLLAMA_HOST: "http://ollama:11434" }
+    entrypoint: ["/bin/sh", "-c", "ollama pull ${DPI_CHAT_MODEL:-llama3.1:8b} && ollama pull ${DPI_EMBEDDING_MODEL:-bge-m3}"]
+    restart: "no"
+
+  app:
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile }
+    depends_on:
+      postgres: { condition: service_healthy }
+      ollama: { condition: service_started }
+    environment:
+      DPI_DB_URL: jdbc:postgresql://postgres:5432/dpi
+      DPI_DB_USER: dpi
+      DPI_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DPI_JWT_ISSUER_URI: ${DPI_JWT_ISSUER_URI:?set DPI_JWT_ISSUER_URI}
+      DPI_ES_URIS: ${DPI_ES_URIS:?set DPI_ES_URIS}
+      DPI_ES_USER: ${DPI_ES_USER:-}
+      DPI_ES_PASSWORD: ${DPI_ES_PASSWORD:-}
+      DPI_ES_API_KEY: ${DPI_ES_API_KEY:-}
+      DPI_OLLAMA_URL: http://ollama:11434
+      DPI_CHAT_MODEL: ${DPI_CHAT_MODEL:-llama3.1:8b}
+      DPI_EMBEDDING_MODEL: ${DPI_EMBEDDING_MODEL:-bge-m3}
+    ports:
+      - "8080:8080"
+      - "127.0.0.1:8081:8081"   # management/Prometheus: bound to localhost only
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+volumes:
+  pgdata:
+  ollama:

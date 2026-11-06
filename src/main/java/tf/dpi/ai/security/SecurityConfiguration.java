@@ -27,7 +27,9 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 class SecurityConfiguration {
 
     @Bean
-    SecurityFilterChain api(HttpSecurity http, SecurityProperties props) throws Exception {
+    SecurityFilterChain api(HttpSecurity http, SecurityProperties props,
+            @org.springframework.beans.factory.annotation.Value("${management.server.port:-1}") int managementPort,
+            @org.springframework.beans.factory.annotation.Value("${server.port:8080}") int serverPort) throws Exception {
         if (props.jwtIssuerUri() == null || props.jwtIssuerUri().isBlank()) {
             throw new IllegalStateException("dpi.security.jwt-issuer-uri (DPI_JWT_ISSUER_URI) must be configured");
         }
@@ -35,6 +37,10 @@ class SecurityConfiguration {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
+                        // Prometheus scrape: only on the dedicated management port, which must be NetworkPolicy-restricted
+                        .requestMatchers(r -> managementPort > 0 && managementPort != serverPort
+                                && r.getLocalPort() == managementPort && r.getRequestURI().startsWith("/actuator/prometheus"))
+                        .permitAll()
                         .requestMatchers("/actuator/**").hasRole("OPERATOR")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").hasRole("OPERATOR")
                         .requestMatchers(HttpMethod.POST, "/api/v1/analyses").hasAnyRole("ANALYST", "REVIEWER")

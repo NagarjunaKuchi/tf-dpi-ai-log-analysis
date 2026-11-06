@@ -1,0 +1,54 @@
+{{- if and (eq .Values.llm.provider "ollama") .Values.llm.ollama.deploy }}
+# Minimal in-cluster Ollama. Models are NOT pulled automatically: run `ollama pull <model>` once (see docs/OPERATIONS.md).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "dpi.fullname" . }}-ollama
+  labels: {{- include "dpi.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- if .Values.llm.ollama.storageClassName }}
+  storageClassName: {{ .Values.llm.ollama.storageClassName }}
+  {{- end }}
+  resources: { requests: { storage: {{ .Values.llm.ollama.storage }} } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dpi.fullname" . }}-ollama
+  labels: {{- include "dpi.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/instance: {{ .Release.Name }}, app.kubernetes.io/component: ollama }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/instance: {{ .Release.Name }}, app.kubernetes.io/component: ollama }
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: ollama
+          image: {{ .Values.llm.ollama.image }}
+          ports: [{ name: http, containerPort: 11434 }]
+          resources:
+            requests: {{- toYaml .Values.llm.ollama.resources.requests | nindent 14 }}
+            limits:
+              {{- toYaml .Values.llm.ollama.resources.limits | nindent 14 }}
+              {{- if gt (int .Values.llm.ollama.gpus) 0 }}
+              nvidia.com/gpu: {{ .Values.llm.ollama.gpus }}
+              {{- end }}
+          volumeMounts: [{ name: models, mountPath: /root/.ollama }]
+      volumes:
+        - name: models
+          persistentVolumeClaim: { claimName: {{ include "dpi.fullname" . }}-ollama }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dpi.fullname" . }}-ollama
+  labels: {{- include "dpi.labels" . | nindent 4 }}
+spec:
+  selector: { app.kubernetes.io/instance: {{ .Release.Name }}, app.kubernetes.io/component: ollama }
+  ports: [{ name: http, port: 11434, targetPort: http }]
+{{- end }}

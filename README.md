@@ -4,10 +4,10 @@ Agentic RAG incident analysis on top of the existing Logstash → Elasticsearch 
 Architecture source of truth: *AI-POC-DPITeam_Enhanced.pptx* (Spring Boot + Spring AI, PostgreSQL + pgvector,
 LangGraph4j, self-hosted Ollama/vLLM, engineer validation as the final gate).
 
-## Status: Phases 2-3 in progress — NOT production ready
+## Status: all phases implemented — NOT production ready (see "Not verified" below)
 
-`mvn test`: 79 tests pass, 6 skipped (Testcontainers/pgvector tests need Docker, which the authoring environment
-lacks). Stack: Spring Boot 4.0.9, Spring AI 2.0.2, Java 21, Elasticsearch client 8.19.24.
+`mvn test`: 110 tests pass against a real PostgreSQL 16 + pgvector 0.6.0 (12 skip when no database is configured). Stack: Spring Boot 4.0.9,
+Spring AI 2.0.2, Java 21, LangGraph4j 1.9.8, Elasticsearch client 8.19.24.
 
 | Component | State | Verification |
 |-----------|-------|--------------|
@@ -17,25 +17,28 @@ lacks). Stack: Spring Boot 4.0.9, Spring AI 2.0.2, Java 21, Elasticsearch client
 | Elasticsearch module (client+TLS+auth, query builder, mapper, read-only reader with bounded retry, health) | Done | 22 unit tests with a mocked client. **Not run against a real cluster** |
 | Embedding service (Spring AI `EmbeddingModel`, batching, timeout, dimension check, duplicate guard) | Done | 8 unit tests with a mocked model. **Not run against Ollama/vLLM** |
 | Incremental ingestion (checkpoint, dead letter, retry, atomic commit, graceful stop) | Done | 14 unit tests with fakes |
-| JDBC store, Flyway schema, retention job, advisory-lock scheduler | Written | 6 integration tests written but **never executed**; SQL never run on PostgreSQL |
-| Spring application context / wiring | Written | **Never started** (needs PostgreSQL); `spring.ai.model.*` selection keys unverified |
-| Embedding model migration (re-embed on version change) | Pending | |
+| JDBC store, Flyway schema, retention job, advisory-lock scheduler | Done | 6 integration tests pass on PostgreSQL 16 + pgvector 0.6.0 (Flyway, HNSW, atomic commit, retention) |
+| Spring application context / wiring | Done | Full context starts (test + packaged jar boot, ~12 s) against real PostgreSQL; Ollama and OpenAI-compatible (vLLM) provider selection both start. Elasticsearch/LLM servers were unreachable stubs in those runs |
+| Embedding model migration (re-embed on version change) | Documented manual procedure only | `docs/EMBEDDING-MIGRATION.md`; no automation |
 | Runbook / incident knowledge ingestion (Module 7) | Implemented; integration-tested on PostgreSQL 16 + pgvector 0.6.0 | Versioning, masking, UNVERIFIED-by-default, atomic supersession, validation. HTTP endpoints in Phase 5 row |
-| Vector retrieval service (Spring AI `VectorStore`, filters) | Implemented, compiles | `VectorStoreDocumentRetriever` + metadata filters pinned to embedding model/version. Service/level/time-overlap/embedding-model filters and similarity threshold verified against real pgvector with a fake embedding model (real model quality untested) |
+| Vector retrieval service (Spring AI `VectorStore`, filters) | Implemented; integration-tested | `VectorStoreDocumentRetriever` + metadata filters pinned to embedding model/version. Service/level/time-overlap/embedding-model filters and similarity threshold verified against real pgvector with a fake embedding model (real model quality untested) |
 | LangGraph4j agent, nodes, tools (Modules 8-9) | Implemented, 6 graph tests with a fake LLM | 9 nodes, bounded loops, timeout, explicit failure outcome. Run state is in-memory (`MemorySaver`) so runs are NOT resumable after a restart; the content-free step trail is persisted to `agent_checkpoint` and stale runs are failed as INTERRUPTED. Durable resumable checkpoints are NOT implemented. `SpringAiAgentLlm` never run against a real model |
-| Evidence verification (Module 10), report generation (Module 11) | Implemented, tested via graph tests | Deterministic verifier; report is data only, REST exposure in Phase 5. Engineer-review decision endpoint pending |
+| Evidence verification (Module 10), report generation (Module 11) | Implemented, tested via graph tests | Deterministic verifier; report is data only, REST exposure in Phase 5. Review decision endpoint is in the REST row |
 | REST API, security, rate limiting, OpenAPI | Implemented; components unit-tested (14 tests) | Async analyses, report fetch, human review gate, knowledge ingest/validate, JWT+RBAC, per-instance rate limit, correlation ids, problem+json. Security filter chain and controllers never exercised in a running context |
-| LLM/vector/agent metrics, tracing, JSON logging config | Partial (ingestion + ES + embedding metrics only) | |
-| Dockerfile, Compose, Kubernetes, Helm, Grafana | Pending | |
-| End-to-end scenarios | Pending | |
+| LLM/retrieval/analysis/evidence metrics, JSON logging | Implemented | Metric names confirmed from a live scrape of the jar; distributed tracing NOT implemented |
+| Dockerfile, Compose, Kubernetes (Helm), Grafana | Written; chart linted, rendered (4 configs) and kubeconform-validated; jar boot-tested | Dockerfile and Compose never built/run (no Docker daemon); chart never installed in a cluster; dashboard JSON never imported into Grafana |
+| End-to-end scenarios | Implemented (6, scripted LLM) | Real graph/tools/pgvector; LLM and Elasticsearch are stubs |
 
-## Next steps
+## Not verified (must be done before any production claim)
 
-1. Run `mvn test` where Docker is available to execute the pgvector integration tests and fix any SQL issues.
-2. Start the application against PostgreSQL + Ollama to validate wiring (`spring.ai.model.*`, `_id` sort key).
-3. Phase 6: durable agent checkpoints, context-startup and controller/security integration tests, e2e scenarios, LLM/vector/agent metrics, JSON logging, tracing. Phase 7: Docker/K8s/Helm.
+1. Real Elasticsearch 8.19.24 with the actual Logstash field mapping (flat field names and the `_id` sort tiebreaker are assumptions).
+2. A real Ollama / vLLM chat model (structured-output reliability) and the real BGE-M3 embedding model (retrieval quality, 1024 dimensions).
+3. A real JWT issuer and claim layout; the Docker image, Compose stack, Helm install, NetworkPolicy enforcement and Grafana import.
+4. Production PostgreSQL / pgvector versions, load and capacity behaviour (no performance test exists), a dependency CVE scan.
+5. Masking rules against real MOSIP/DPI log samples; durable resumable agent checkpoints and distributed tracing are not implemented.
 
-See `docs/ASSUMPTIONS.md` for design decisions and `docs/RAG-DESIGN.md` for the retrieval design.
+See `docs/OPERATIONS.md`, `docs/SECURITY-ASSESSMENT.md`, `docs/PERFORMANCE.md`, `docs/EMBEDDING-MIGRATION.md`,
+`docs/ASSUMPTIONS.md` for design decisions and `docs/RAG-DESIGN.md` for the retrieval design.
 
 
 ## Running the tests

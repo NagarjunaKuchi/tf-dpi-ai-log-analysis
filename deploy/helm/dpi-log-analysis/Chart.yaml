@@ -1,0 +1,6 @@
+apiVersion: v2
+name: dpi-log-analysis
+description: DPI agentic RAG log analysis service (read-only over Elasticsearch, PostgreSQL+pgvector, self-hosted LLM)
+type: application
+version: 0.1.0
+appVersion: "0.1.0-SNAPSHOT"

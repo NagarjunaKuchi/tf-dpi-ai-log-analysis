@@ -4,10 +4,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import tf.dpi.ai.exception.CapacityExceededException;
 import tf.dpi.ai.exception.ConflictException;
 import tf.dpi.ai.exception.DependencyUnavailableException;
@@ -16,16 +20,11 @@ import tf.dpi.ai.masking.MaskingException;
 
 /** Maps failures to RFC 9457 problem details. Messages are fixed strings: no request content, no internals. */
 @RestControllerAdvice
-class ApiExceptionHandler {
+class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    ProblemDetail invalid(MethodArgumentNotValidException e) {
-        return pd(HttpStatus.BAD_REQUEST, "Request validation failed");
-    }
-
-    @ExceptionHandler({HttpMessageNotReadableException.class, IllegalArgumentException.class})
+    @ExceptionHandler(IllegalArgumentException.class)
     ProblemDetail unreadable(Exception e) {
         return pd(HttpStatus.BAD_REQUEST, "Malformed request");
     }
@@ -60,6 +59,13 @@ class ApiExceptionHandler {
     ProblemDetail unexpected(Exception e) {
         log.error("unhandled error: {}", e.getClass().getSimpleName());
         return pd(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
+    }
+
+    /** Validation failures: fixed message, field values are never echoed back. */
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+        return ResponseEntity.badRequest().body(pd(HttpStatus.BAD_REQUEST, "Request validation failed"));
     }
 
     private static ProblemDetail pd(HttpStatus status, String detail) {

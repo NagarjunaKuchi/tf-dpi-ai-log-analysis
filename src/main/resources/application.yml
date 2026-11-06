@@ -18,10 +18,6 @@ spring:
       minimum-idle: 2
       connection-timeout: 5000
       max-lifetime: 1500000
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
   flyway:
     enabled: true
   ai:
@@ -67,6 +63,8 @@ server:
     accept-count: 100
 
 management:
+  server:
+    port: ${DPI_MANAGEMENT_PORT:8081}   # actuator on its own port; never expose it through the Ingress, restrict by NetworkPolicy
   endpoints:
     web:
       exposure:

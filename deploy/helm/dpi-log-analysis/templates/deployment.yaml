@@ -1,0 +1,98 @@
+{{- required "config.dbUrl is required" .Values.config.dbUrl | trunc 0 -}}
+{{- required "config.jwtIssuerUri is required" .Values.config.jwtIssuerUri | trunc 0 -}}
+{{- required "config.esUris is required" .Values.config.esUris | trunc 0 -}}
+{{- required "existingSecret is required (Secret with DPI_DB_PASSWORD)" .Values.existingSecret | trunc 0 -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dpi.fullname" . }}
+  labels: {{- include "dpi.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  selector:
+    matchLabels: {{- include "dpi.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "dpi.selector" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ toYaml .Values.config | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 90   # > spring.lifecycle.timeout-per-shutdown-phase (60s)
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: management, containerPort: 8081 }
+          env:
+            - { name: DPI_DB_URL, value: {{ .Values.config.dbUrl | quote }} }
+            - { name: DPI_DB_USER, value: {{ .Values.config.dbUser | quote }} }
+            - name: DPI_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DPI_DB_PASSWORD } }
+            - { name: DPI_JWT_ISSUER_URI, value: {{ .Values.config.jwtIssuerUri | quote }} }
+            - { name: DPI_ES_URIS, value: {{ .Values.config.esUris | quote }} }
+            - { name: DPI_ES_USER, value: {{ .Values.config.esUser | quote }} }
+            - { name: DPI_ES_INDEX_PATTERN, value: {{ .Values.config.esIndexPattern | quote }} }
+            - { name: DPI_ES_CA_PATH, value: {{ .Values.config.esCaPath | quote }} }
+            - name: DPI_ES_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DPI_ES_PASSWORD, optional: true } }
+            - name: DPI_ES_API_KEY
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DPI_ES_API_KEY, optional: true } }
+            - { name: DPI_EMBEDDING_MODEL, value: {{ .Values.config.embeddingModel | quote }} }
+            - { name: DPI_EMBEDDING_MODEL_VERSION, value: {{ .Values.config.embeddingModelVersion | quote }} }
+            - { name: DPI_CHAT_MODEL, value: {{ .Values.config.chatModel | quote }} }
+            - { name: DPI_INGESTION_ENABLED, value: {{ .Values.config.ingestionEnabled | quote }} }
+            {{- if eq .Values.llm.provider "openai" }}
+            - { name: SPRING_AI_MODEL_CHAT, value: "openai" }
+            - { name: SPRING_AI_MODEL_EMBEDDING, value: "openai" }
+            - { name: SPRING_AI_OPENAI_BASE_URL, value: {{ .Values.llm.baseUrl | quote }} }
+            - { name: SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL, value: {{ .Values.config.chatModel | quote }} }
+            - { name: SPRING_AI_OPENAI_EMBEDDING_OPTIONS_MODEL, value: {{ .Values.config.embeddingModel | quote }} }
+            - name: SPRING_AI_OPENAI_API_KEY
+              valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: SPRING_AI_OPENAI_API_KEY, optional: true } }
+            {{- else }}
+            - { name: DPI_OLLAMA_URL, value: {{ .Values.llm.baseUrl | quote }} }
+            {{- end }}
+            {{- range $k, $v := .Values.config.extraEnv }}
+            - { name: {{ $k }}, value: {{ $v | quote }} }
+            {{- end }}
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: management }
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: management }
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: management }
+            periodSeconds: 10
+            failureThreshold: 3
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            {{- with .Values.extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{- end }}
+      volumes:
+        - { name: tmp, emptyDir: { sizeLimit: 256Mi } }
+        {{- with .Values.extraVolumes }}{{ toYaml . | nindent 8 }}{{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}

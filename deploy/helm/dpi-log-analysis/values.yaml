@@ -1,0 +1,99 @@
+# All values below are defaults for review, not tuned production settings.
+image:
+  repository: registry.example.com/dpi/log-analysis   # PLACEHOLDER: set to your registry
+  tag: ""                                              # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+replicaCount: 2            # ingestion is single-writer (PostgreSQL advisory lock), so >1 replica is safe
+
+# Name of a pre-created Secret holding credentials. Required keys: DPI_DB_PASSWORD.
+# Optional keys: DPI_ES_PASSWORD, DPI_ES_API_KEY, SPRING_AI_OPENAI_API_KEY. The chart never creates or contains secrets.
+existingSecret: ""
+
+config:
+  dbUrl: ""                      # e.g. jdbc:postgresql://pg.example:5432/dpi   (REQUIRED)
+  dbUser: dpi
+  jwtIssuerUri: ""               # REQUIRED; the service refuses to start without it
+  esUris: ""                     # REQUIRED; the existing Elasticsearch (read-only account)
+  esUser: ""
+  esIndexPattern: "logstash-*"
+  esCaPath: ""                   # mount a CA via extraVolumes if ES uses a private CA
+  chatModel: "llama3.1:8b"
+  embeddingModel: "bge-m3"
+  embeddingModelVersion: "1"
+  ingestionEnabled: true
+  extraEnv: {}                   # additional plain env vars
+
+llm:
+  provider: ollama               # ollama | openai  (openai = any OpenAI-compatible server such as vLLM)
+  baseUrl: "http://ollama:11434" # Ollama URL, or the vLLM base URL when provider=openai
+  ollama:
+    deploy: false                # deploy a simple in-cluster Ollama (UNTESTED here); otherwise point baseUrl at your own
+    image: ollama/ollama:latest
+    gpus: 0
+    storage: 50Gi
+    storageClassName: ""
+    resources:
+      requests: { cpu: "2", memory: 8Gi }
+      limits: { memory: 16Gi }
+
+service:
+  port: 8080
+  managementPort: 8081
+
+resources:
+  requests: { cpu: 500m, memory: 1Gi }
+  limits: { memory: 2Gi }
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile: { type: RuntimeDefault }
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: { drop: [ALL] }
+
+ingress:
+  enabled: false                 # the management port is never exposed through the Ingress
+  className: ""
+  host: ""
+  tlsSecretName: ""
+  annotations: {}
+
+networkPolicy:
+  enabled: true
+  ingressFromNamespaceLabels:    # who may call the API (port 8080)
+    kubernetes.io/metadata.name: ingress-nginx
+  monitoringNamespaceLabels:     # who may scrape port 8081
+    kubernetes.io/metadata.name: monitoring
+  # Egress is default-deny except DNS and these rules. Tighten `to` to the real destinations (pod/namespace/ipBlock);
+  # the default (ports only, any destination) is permissive on purpose so a fresh install works.
+  egress:
+    - ports: [{ port: 5432, protocol: TCP }]      # PostgreSQL
+    - ports: [{ port: 9200, protocol: TCP }]      # Elasticsearch
+    - ports: [{ port: 11434, protocol: TCP }]     # Ollama
+    - ports: [{ port: 8000, protocol: TCP }]      # vLLM
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+serviceMonitor:
+  enabled: false                 # requires the Prometheus Operator CRDs
+  interval: 30s
+
+extraVolumes: []
+extraVolumeMounts: []
+nodeSelector: {}
+tolerations: []
+affinity: {}
