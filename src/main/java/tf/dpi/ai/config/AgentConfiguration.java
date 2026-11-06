@@ -26,8 +26,8 @@ import tf.dpi.ai.vectorstore.LogChunkRetrievalService;
 class AgentConfiguration {
 
     @Bean
-    AgentLlm agentLlm(ChatClient.Builder builder) {
-        return new SpringAiAgentLlm(builder);
+    AgentLlm agentLlm(ChatClient.Builder builder, io.micrometer.core.instrument.MeterRegistry meters) {
+        return new tf.dpi.ai.observability.MeteredAgentLlm(new SpringAiAgentLlm(builder), meters);
     }
 
     @Bean

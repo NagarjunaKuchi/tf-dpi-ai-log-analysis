@@ -42,10 +42,12 @@ is recorded here. None of these changes the approved architecture.
 29. Any authenticated ANALYST/REVIEWER can read any analysis; there is no per-owner or per-tenant isolation.
 30. A reviewer may approve their own submitted analysis; separation of duties is not enforced.
 31. A Jackson 2 `ObjectMapper` bean is declared for JDBC JSON and the ES client because Boot 4's MVC mapper is Jackson 3; two executor beans of the same type rely on parameter-name injection. Both unverified until the context is started.
-32. In-flight analyses are lost on restart (status stays RUNNING); there is no recovery job yet.
+32. In-flight analyses are lost on restart. `StaleAnalysisRecovery` marks QUEUED/RUNNING rows idle for longer than 2x agent timeout + 1 min as FAILED/INTERRUPTED (at startup and every 5 min); the caller must resubmit. Runs are not resumed.
 
 ## Phase 6 notes
 
 33. The agent timeout is checked between nodes only; one LLM call can overrun it by at most the capped Spring AI retry window plus the model's own read timeout. A hard per-call deadline is not implemented.
 34. Integration tests use pgvector 0.6.0; production should be validated on the actual pgvector version (HNSW options differ across releases).
 35. Tests use a deterministic hashing embedding model; they prove plumbing and filters, not semantic retrieval quality with BGE-M3.
+36. End-to-end scenarios use a scripted LLM, so they prove the pipeline, the verifier and the report contract, not how a real model behaves (it may produce malformed structured output, which ends in a FAILED outcome).
+37. No distributed tracing is configured.

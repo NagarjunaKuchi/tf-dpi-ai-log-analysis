@@ -88,7 +88,7 @@ public class AgentNodes {
                 try {
                     found.addAll(tools.esQuery(q.service(), q.from(), q.to(), q.minLevel(), q.errorCode(), q.traceId()));
                 } catch (IllegalArgumentException denied) {
-                    log.info("esQuery skipped by tool policy: {}", denied.getMessage());
+                    log.info("esQuery skipped by tool policy for analysis {}: {}", s.analysisId(), denied.getMessage());
                 }
             }
             List<Evidence> kb = tools.runbookSearch(s.searchText());
@@ -243,7 +243,8 @@ public class AgentNodes {
             return body.get();
         } catch (RuntimeException e) {
             // Log the exception type only: messages from the LLM / stores could echo sensitive content.
-            log.warn("agent node {} failed: {}", node, e.getClass().getSimpleName());
+            // node threads do not inherit the request MDC, so the analysis id is logged explicitly
+            log.warn("agent node {} failed for analysis {}: {}", node, s.analysisId(), e.getClass().getSimpleName());
             return Map.of(FAILURE, node + " failed: " + e.getClass().getSimpleName(), TRAIL, node + ": failed");
         }
     }

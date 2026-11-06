@@ -37,7 +37,7 @@ class AnalysisConfiguration {
 
     @Bean
     AnalysisService analysisService(AnalysisRepository repo, CompiledGraph<DpiAgentState> graph, MaskingEngine masking,
-            ExecutorService analysisExecutor, Clock clock) {
-        return new AnalysisService(repo, graph, masking, analysisExecutor, clock);
+            ExecutorService analysisExecutor, Clock clock, io.micrometer.core.instrument.MeterRegistry meters) {
+        return new AnalysisService(repo, graph, masking, analysisExecutor, clock, meters);
     }
 }

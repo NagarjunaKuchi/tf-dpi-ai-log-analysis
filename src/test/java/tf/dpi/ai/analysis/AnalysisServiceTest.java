@@ -35,7 +35,7 @@ class AnalysisServiceTest {
     @SuppressWarnings("unchecked")
     private AnalysisService service(java.util.concurrent.ExecutorService ex) {
         return new AnalysisService(repo, mock(org.bsc.langgraph4j.CompiledGraph.class), masking, ex,
-                Clock.fixed(Instant.parse("2026-11-06T10:00:00Z"), ZoneOffset.UTC));
+                Clock.fixed(Instant.parse("2026-11-06T10:00:00Z"), ZoneOffset.UTC), new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
     }
 
     @Test

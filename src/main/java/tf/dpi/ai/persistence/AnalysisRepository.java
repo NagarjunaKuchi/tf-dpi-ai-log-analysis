@@ -108,6 +108,34 @@ public class AnalysisRepository {
         return Boolean.TRUE.equals(ok);
     }
 
+    /** Persists the content-free step trail of a run (one row per step) for audit and troubleshooting. */
+    public void saveTrail(UUID id, List<String> steps) {
+        guard(() -> tx.executeWithoutResult(s -> {
+            jdbc.update("DELETE FROM agent_checkpoint WHERE analysis_id = ?", id);
+            List<Object[]> rows = new java.util.ArrayList<>();
+            for (int i = 0; i < steps.size(); i++) {
+                rows.add(new Object[] {id, i, "trail", toJson(Map.of("step", steps.get(i)))});
+            }
+            jdbc.batchUpdate("INSERT INTO agent_checkpoint (analysis_id, seq, node_name, state_json) "
+                    + "VALUES (?, ?, ?, ?::jsonb)", rows);
+        }));
+    }
+
+    public List<String> trail(UUID id) {
+        return guard(() -> jdbc.queryForList("SELECT state_json ->> 'step' FROM agent_checkpoint WHERE analysis_id = ? "
+                + "ORDER BY seq", String.class, id));
+    }
+
+    /**
+     * Marks QUEUED/RUNNING analyses not updated for {@code olderThan} as FAILED (INTERRUPTED). Runs are not resumable, so
+     * work lost to a restart is surfaced to the caller instead of staying RUNNING forever.
+     */
+    public int failStale(java.time.Duration olderThan) {
+        return guard(() -> jdbc.update("UPDATE analysis_request SET status = 'FAILED', failure_reason = 'INTERRUPTED', "
+                + "updated_at = now() WHERE status IN ('QUEUED','RUNNING') AND updated_at < now() - (? * interval '1 second')",
+                olderThan.toSeconds()));
+    }
+
     public void audit(String actor, String action, String subject, String correlationId, Map<String, Object> detail) {
         jdbc.update("INSERT INTO audit_log (actor, action, subject, correlation_id, detail) VALUES (?, ?, ?, ?, ?::jsonb)",
                 actor, action, subject, correlationId, toJson(detail));

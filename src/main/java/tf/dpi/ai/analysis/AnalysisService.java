@@ -1,5 +1,7 @@
 package tf.dpi.ai.analysis;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Clock;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -33,9 +35,11 @@ public class AnalysisService {
     private final MaskingEngine masking;
     private final ExecutorService executor;
     private final Clock clock;
+    private final MeterRegistry meters;
 
     public AnalysisService(AnalysisRepository repo, CompiledGraph<DpiAgentState> graph, MaskingEngine masking,
-            ExecutorService executor, Clock clock) {
+            ExecutorService executor, Clock clock, MeterRegistry meters) {
+        this.meters = meters;
         this.repo = repo;
         this.graph = graph;
         this.masking = masking;
@@ -57,6 +61,7 @@ public class AnalysisService {
     }
 
     void run(UUID id, String maskedQuestion, String user, String correlationId) {
+        Timer.Sample sample = Timer.start(meters);
         MDC.put("correlationId", correlationId);
         MDC.put("analysisId", id.toString());
         try {
@@ -74,8 +79,14 @@ public class AnalysisService {
                         ? AnalysisStatus.TIMED_OUT : AnalysisStatus.FAILED;
             };
             repo.completeWithReport(id, status, report, "agent", correlationId);
+            repo.saveTrail(id, end.<java.util.List<String>>value(AgentStateKeys.TRAIL).orElse(java.util.List.of()));
+            meters.counter("dpi.analysis.completed", "outcome", report.outcome().name()).increment();
+            meters.counter("dpi.evidence.claims", "result", "verified").increment(report.verifiedFindings().size());
+            meters.counter("dpi.evidence.claims", "result", "rejected").increment(report.rejectedClaims().size());
+            sample.stop(Timer.builder("dpi.analysis.duration").tag("outcome", report.outcome().name()).register(meters));
         } catch (RuntimeException e) {
             log.error("analysis {} crashed: {}", id, e.getClass().getSimpleName());
+            meters.counter("dpi.analysis.completed", "outcome", "CRASHED").increment();
             try {
                 repo.updateStatus(id, AnalysisStatus.FAILED, "INTERNAL_" + e.getClass().getSimpleName());
             } catch (RuntimeException secondary) {

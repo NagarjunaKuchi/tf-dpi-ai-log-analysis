@@ -161,4 +161,30 @@ class RetrievalIntegrationTest {
         assertThat(jdbc.queryForList("SELECT action FROM audit_log WHERE subject = ? ORDER BY id", String.class,
                 id.toString())).containsExactly("ANALYSIS_SUBMITTED", "REPORT_GENERATED", "REPORT_REVIEWED");
     }
+
+    @Test
+    void staleInFlightAnalysesAreFailedButFreshOnesAreLeftAlone() {
+        AnalysisRepository repo = new AnalysisRepository(jdbc, txm, json);
+        UUID stale = UUID.randomUUID();
+        UUID fresh = UUID.randomUUID();
+        repo.create(stale, "q", "u", "cid-12345678");
+        repo.create(fresh, "q", "u", "cid-12345678");
+        repo.updateStatus(stale, AnalysisStatus.RUNNING, null);
+        jdbc.update("UPDATE analysis_request SET updated_at = now() - interval '1 hour' WHERE analysis_id = ?", stale);
+
+        assertThat(repo.failStale(Duration.ofMinutes(10))).isEqualTo(1);
+        assertThat(repo.find(stale).orElseThrow().status()).isEqualTo(AnalysisStatus.FAILED);
+        assertThat(repo.find(stale).orElseThrow().failureReason()).isEqualTo("INTERRUPTED");
+        assertThat(repo.find(fresh).orElseThrow().status()).isEqualTo(AnalysisStatus.QUEUED);
+    }
+
+    @Test
+    void stepTrailIsStoredInOrderAndReplacedOnRewrite() {
+        AnalysisRepository repo = new AnalysisRepository(jdbc, txm, json);
+        UUID id = UUID.randomUUID();
+        repo.create(id, "q", "u", "cid-12345678");
+        repo.saveTrail(id, List.of("plan", "retrieval attempt 1", "report generated: FAILED"));
+        repo.saveTrail(id, List.of("plan", "report generated: FAILED"));
+        assertThat(repo.trail(id)).containsExactly("plan", "report generated: FAILED");
+    }
 }
