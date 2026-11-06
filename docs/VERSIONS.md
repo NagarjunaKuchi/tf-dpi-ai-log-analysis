@@ -1,20 +1,21 @@
-# Dependency versions — all UNVERIFIED
+# Dependency versions
 
-Maven Central was unreachable when `pom.xml` was written, so these were chosen from prior knowledge and
-**must be confirmed** (resolved, API-checked and compiled) before relying on them.
+Verified against Maven Central on 2026-11-06 (version exists; project compiles and unit tests pass).
+"API unverified" means the library compiles in the build but its API has not yet been used by project code.
 
-| Dependency | Version in pom | Check |
-|------------|----------------|-------|
-| spring-boot-starter-parent | 4.0.1 | Exact patch exists. Spring AI 2.0.x supports Boot 4.0.x/4.1.x |
-| spring-ai-bom | 2.0.2 | Chosen by project owner. Confirm it resolves, and confirm starter names (`spring-ai-starter-model-ollama`, `-openai`, `-vector-store-pgvector`): the docs page for these was not checked |
-| langgraph4j-core | 1.6.0 | Exists; `StateGraph`, conditional edges, checkpoint saver API and Java 21 support |
-| elasticsearch-java | 8.18.0 | Major version matches the existing cluster |
-| springdoc-openapi-starter-webmvc-ui | 2.8.9 | Compatible with Boot 3.5 |
-| resilience4j-spring-boot3 | 2.3.0 | Exists |
-| logstash-logback-encoder | 8.1 | Exists |
-| bucket4j_jdk17-core | 8.10.1 | Exists; artifact id |
+| Dependency | Version | Status |
+|------------|---------|--------|
+| spring-boot-starter-parent | 4.0.9 | Verified. Latest 4.0.x; Spring AI 2.0.x supports Boot 4.0.x/4.1.x |
+| spring-ai-bom | 2.0.2 | Verified. Starter names resolved in the build |
+| langgraph4j-core | 1.9.8 | Exists; resolved. API unverified |
+| elasticsearch-java | 8.19.24 | Exists. **Must match the existing cluster's major version, which is unknown.** 9.5.x also exists |
+| springdoc-openapi-starter-webmvc-ui | 3.2.0 | Exists; Boot 4 compatibility unverified at runtime |
+| resilience4j-spring-boot4 | 2.4.0 | Exists (the `-boot3` artifact was replaced) |
+| logstash-logback-encoder | 9.0 | Exists |
+| bucket4j_jdk17-core | 8.22.0 | Exists |
+| testcontainers (junit-jupiter, postgresql, elasticsearch) | managed by Boot BOM | Artifact ids renamed to `testcontainers-*` (Testcontainers 2.x) |
 
-Also confirm: PostgreSQL 16+ with pgvector 0.7+ (HNSW), and that `vector(1024)` matches the deployed embedding model.
+Still to confirm: PostgreSQL 16+ with pgvector 0.7+ (HNSW), and that `vector(1024)` matches the deployed embedding model.
 
 ## Consequences of Spring AI 2.0.x (Spring Boot 4)
 

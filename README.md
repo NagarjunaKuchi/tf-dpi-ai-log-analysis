@@ -6,25 +6,21 @@ LangGraph4j, self-hosted Ollama/vLLM, engineer validation as the final gate).
 
 ## Status: foundation only — NOT production ready
 
-This repository was started in an environment that **could not reach Maven Central**, so the full Maven build has
-never run. Nothing below is claimed as built or tested beyond what the "Verification" column says.
+Build verified: `mvn test-compile` succeeds and 33 unit tests pass (Spring Boot 4.0.9, Spring AI 2.0.2, Java 21).
+Everything marked Pending has no code yet.
 
 | Component | State | Verification |
 |-----------|-------|--------------|
-| Maven `pom.xml` | Written | **Not resolved.** All versions unverified (`docs/VERSIONS.md`) |
-| Domain model (`LogEvent`, `LogChunk`, `LogLevel`) | Implemented | Compiled with `javac`; exercised by scratch harness |
-| Masking engine (fail-closed, 12 categories) | Implemented | Compiled; 54 behavior checks passed in a scratch harness (not JUnit) |
-| Structured JSON masker | Implemented | **Not compiled** (needs Jackson) |
-| Log grouping and chunking | Implemented | Compiled; scratch harness only |
-| JUnit tests (masking, chunking) | Written | **Never run** (JUnit/AssertJ not resolvable here) |
-| Flyway `V1` schema (pgvector, HNSW, checkpoints, dead letter, analysis state) | Written | **Not applied** to a real PostgreSQL |
-| `application.yml` | Skeleton | Not loaded |
+| Maven `pom.xml` | Written | Resolves and compiles; versions verified to exist (`docs/VERSIONS.md`). LangGraph4j, Spring AI and Elasticsearch APIs not yet exercised |
+| Domain model, masking (12 categories, fail-closed), JSON masker, chunking | Implemented | 33 JUnit tests pass (`MaskingEngineTest` 24, `LogChunkerTest` 9) |
+| Flyway `V1` schema (pgvector, HNSW, checkpoints, dead letter, analysis state) | Written | **Not applied** to a real PostgreSQL yet |
+| `application.yml` | Skeleton | Not loaded (no Spring context test yet) |
 | Elasticsearch integration (Module 1) | Pending | |
 | Incremental ingestion pipeline (Module 2) | Pending | |
 | Embedding service (Module 5) | Pending | |
 | pgvector repositories / retrieval (Module 6) | Pending | |
 | Runbook ingestion (Module 7) | Pending | |
-| LangGraph4j agent, nodes, tools (Modules 8–9) | Pending | |
+| LangGraph4j agent, nodes, tools (Modules 8-9) | Pending | |
 | Evidence verification (Module 10) | Pending | |
 | Report generation (Module 11) | Pending | |
 | REST API, security, rate limiting, OpenAPI | Pending | |
