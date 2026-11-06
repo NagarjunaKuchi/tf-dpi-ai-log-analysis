@@ -27,7 +27,7 @@
     <argLine>-Duser.timezone=UTC</argLine>   <!-- deterministic tests; PostgreSQL rejects some legacy zone ids such as Asia/Calcutta -->
     <spring-ai.version>2.0.2</spring-ai.version>                 <!-- verified to exist -->
     <langgraph4j.version>1.9.8</langgraph4j.version>             <!-- verified to exist; API not yet compiled against -->
-    <elasticsearch-java.version>8.19.24</elasticsearch-java.version> <!-- verified to exist; MUST match the existing cluster major version (unknown) -->
+    <elasticsearch-java.version>9.5.6</elasticsearch-java.version> <!-- verified to exist; MUST match the existing cluster major version (unknown) -->
     <springdoc.version>3.2.0</springdoc.version>                 <!-- verified to exist; 3.x line assumed for Boot 4 -->
     <resilience4j.version>2.4.0</resilience4j.version>           <!-- verified; spring-boot4 artifact exists -->
     <logstash-logback-encoder.version>9.0</logstash-logback-encoder.version> <!-- verified to exist -->
