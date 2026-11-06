@@ -12,7 +12,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.0.9</version> <!-- verified on Maven Central; Spring AI 2.0.x supports Boot 4.0.x and 4.1.x -->
+    <version>4.1.2</version> <!-- verified on Maven Central; Spring AI 2.0.x supports Boot 4.0.x and 4.1.x -->
     <relativePath/>
   </parent>
 
