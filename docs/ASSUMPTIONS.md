@@ -33,3 +33,13 @@ is recorded here. None of these changes the approved architecture.
 23. A finding must quote terms verbatim present in its cited evidence; this catches fabricated citations but cannot detect a correct quote used to support a wrong conclusion. Human review remains the final gate.
 24. Knowledge documents are UNVERIFIED until an engineer validates them; UNVERIFIED knowledge is still retrievable but flagged in the report. Change this if policy requires validated-only retrieval.
 25. Retrieval similarity thresholds (0.5 search, 0.6 grading) are placeholder defaults that need tuning on real data.
+
+## Phase 5 assumptions (API and security)
+
+26. The IdP issues JWTs with a string-array `roles` claim (configurable via `dpi.security.rolesClaim`) containing ANALYST, REVIEWER, KNOWLEDGE_ADMIN or OPERATOR. Keycloak-style nested `realm_access.roles` is not handled.
+27. The application refuses to start without `DPI_JWT_ISSUER_URI` (fail closed). Startup also contacts the issuer for key discovery; behaviour when it is down is unverified.
+28. Rate limiting is per instance (in-memory token bucket), so the effective cluster limit scales with replica count.
+29. Any authenticated ANALYST/REVIEWER can read any analysis; there is no per-owner or per-tenant isolation.
+30. A reviewer may approve their own submitted analysis; separation of duties is not enforced.
+31. A Jackson 2 `ObjectMapper` bean is declared for JDBC JSON and the ES client because Boot 4's MVC mapper is Jackson 3; two executor beans of the same type rely on parameter-name injection. Both unverified until the context is started.
+32. In-flight analyses are lost on restart (status stays RUNNING); there is no recovery job yet.

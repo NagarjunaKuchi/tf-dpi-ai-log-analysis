@@ -4,6 +4,11 @@
 spring:
   application:
     name: dpi-agentic-rag-log-analysis
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${DPI_JWT_ISSUER_URI}
   datasource:
     url: ${DPI_DB_URL}
     username: ${DPI_DB_USER}
