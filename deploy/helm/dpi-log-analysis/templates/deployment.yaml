@@ -53,6 +53,8 @@ spec:
             - { name: DPI_EMBEDDING_MODEL, value: {{ .Values.config.embeddingModel | quote }} }
             - { name: DPI_EMBEDDING_MODEL_VERSION, value: {{ .Values.config.embeddingModelVersion | quote }} }
             - { name: DPI_CHAT_MODEL, value: {{ .Values.config.chatModel | quote }} }
+            - { name: DPI_CHAT_NUM_CTX, value: {{ .Values.config.chatNumCtx | quote }} }
+            - { name: DPI_CHAT_NUM_PREDICT, value: {{ .Values.config.chatNumPredict | quote }} }
             - { name: DPI_INGESTION_ENABLED, value: {{ .Values.config.ingestionEnabled | quote }} }
             {{- if eq .Values.llm.provider "openai" }}
             - { name: SPRING_AI_MODEL_CHAT, value: "openai" }

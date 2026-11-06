@@ -19,7 +19,9 @@ config:
   esUser: ""
   esIndexPattern: "logstash-*"
   esCaPath: ""                   # mount a CA via extraVolumes if ES uses a private CA
-  chatModel: "llama3.1:8b"
+  chatModel: "llama3.1:8b"      # verify the exact tag exists in your Ollama (e.g. llama3.1:8b, llama3:8b, mistral:7b)
+  chatNumCtx: 8192              # must not exceed the model's context window
+  chatNumPredict: 1024
   embeddingModel: "bge-m3"
   embeddingModelVersion: "1"
   ingestionEnabled: true

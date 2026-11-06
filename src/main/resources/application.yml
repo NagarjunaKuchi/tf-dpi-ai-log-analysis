@@ -42,6 +42,8 @@ spring:
         options:
           model: ${DPI_CHAT_MODEL:llama3.1:8b}
           temperature: 0.1
+          num-ctx: ${DPI_CHAT_NUM_CTX:8192}      # Ollama's default window is small and silently truncates long prompts
+          num-predict: ${DPI_CHAT_NUM_PREDICT:1024}
       embedding:
         options:
           model: ${DPI_EMBEDDING_MODEL:bge-m3}
