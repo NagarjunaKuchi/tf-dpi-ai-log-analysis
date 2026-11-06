@@ -63,6 +63,9 @@
     <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-model-ollama</artifactId></dependency>
     <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-model-openai</artifactId></dependency>
     <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-vector-store-pgvector</artifactId></dependency>
+    <!-- RAG building blocks per Spring AI reference (Retrieval Augmented Generation page) -->
+    <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-rag</artifactId></dependency>
+    <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-vector-store-advisor</artifactId></dependency>
 
     <dependency><groupId>org.bsc.langgraph4j</groupId><artifactId>langgraph4j-core</artifactId><version>${langgraph4j.version}</version></dependency>
 
