@@ -1,0 +1,94 @@
+# Configuration skeleton. No credentials are hardcoded: every secret comes from the environment
+# (Kubernetes Secret / Vault). Property keys under spring.ai.* follow Spring AI 1.0.x and are UNVERIFIED
+# until the first real build.
+spring:
+  application:
+    name: dpi-agentic-rag-log-analysis
+  datasource:
+    url: ${DPI_DB_URL}
+    username: ${DPI_DB_USER}
+    password: ${DPI_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DPI_DB_POOL_MAX:10}
+      minimum-idle: 2
+      connection-timeout: 5000
+      max-lifetime: 1500000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  ai:
+    ollama:
+      base-url: ${DPI_OLLAMA_URL:http://ollama:11434}
+      chat:
+        options:
+          model: ${DPI_CHAT_MODEL:llama3.1:8b}
+          temperature: 0.1
+      embedding:
+        options:
+          model: ${DPI_EMBEDDING_MODEL:bge-m3}
+  lifecycle:
+    timeout-per-shutdown-phase: 60s
+
+server:
+  shutdown: graceful
+  tomcat:
+    threads:
+      max: ${DPI_HTTP_THREADS:100}
+    accept-count: 100
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+dpi:
+  elasticsearch:
+    uris: ${DPI_ES_URIS}
+    index-pattern: ${DPI_ES_INDEX_PATTERN:logstash-*}
+    username: ${DPI_ES_USER:}
+    password: ${DPI_ES_PASSWORD:}
+    api-key: ${DPI_ES_API_KEY:}
+    ca-certificate-path: ${DPI_ES_CA_PATH:}
+    connect-timeout: 5s
+    socket-timeout: 30s
+    page-size: 500
+    max-retries: 3
+    initial-backoff: 500ms
+  masking:
+    max-input-chars: 2000000
+    max-duration: 2s
+    additional-sensitive-json-keys: []
+  chunking:
+    max-chunk-tokens: 512
+    max-gap: 60s
+    max-span: 10m
+    overlap-events: 1
+    max-frames-per-exception: 8
+  embedding:
+    model-name: bge-m3
+    model-version: ${DPI_EMBEDDING_MODEL_VERSION:1}
+    dimensions: 1024
+    batch-size: 32
+    timeout: 30s
+  ingestion:
+    enabled: ${DPI_INGESTION_ENABLED:true}
+    batch-size: 500
+    max-concurrent-batches: 2
+    max-batch-attempts: 3
+    interval: 5m
+    retention: 30d
+  agent:
+    max-retrieval-retries: 2
+    max-verification-retries: 2
+    timeout: 120s
+  security:
+    jwt-issuer-uri: ${DPI_JWT_ISSUER_URI:}
+    rate-limit-per-minute: 60

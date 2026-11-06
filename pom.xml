@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  VERSION STATUS: every version below is UNVERIFIED. The authoring environment could not reach
+  Maven Central, so none of these were resolved or compiled. Confirm each against Maven Central
+  (and Spring AI / Boot compatibility matrix) before the first build. See docs/VERSIONS.md.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.5.6</version> <!-- UNVERIFIED -->
+    <relativePath/>
+  </parent>
+
+  <groupId>tf.dpi.ai</groupId>
+  <artifactId>dpi-agentic-rag-log-analysis</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>DPI Agentic RAG Log Analysis</name>
+  <description>Agentic RAG incident analysis over the existing Logstash/Elasticsearch/Kibana pipeline</description>
+
+  <properties>
+    <java.version>21</java.version>
+    <spring-ai.version>1.0.3</spring-ai.version>                 <!-- UNVERIFIED -->
+    <langgraph4j.version>1.6.0</langgraph4j.version>             <!-- UNVERIFIED -->
+    <elasticsearch-java.version>8.18.0</elasticsearch-java.version> <!-- UNVERIFIED; must match ES server major -->
+    <springdoc.version>2.8.9</springdoc.version>                 <!-- UNVERIFIED -->
+    <resilience4j.version>2.3.0</resilience4j.version>           <!-- UNVERIFIED -->
+    <logstash-logback-encoder.version>8.1</logstash-logback-encoder.version> <!-- UNVERIFIED -->
+    <bucket4j.version>8.10.1</bucket4j.version>                  <!-- UNVERIFIED -->
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-bom</artifactId>
+        <version>${spring-ai.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-security</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-oauth2-resource-server</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-validation</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
+    <dependency><groupId>io.micrometer</groupId><artifactId>micrometer-registry-prometheus</artifactId></dependency>
+    <dependency><groupId>io.micrometer</groupId><artifactId>micrometer-tracing-bridge-otel</artifactId></dependency>
+
+    <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>
+    <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-core</artifactId></dependency>
+    <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-database-postgresql</artifactId></dependency>
+
+    <!-- Spring AI: Ollama chat+embedding, OpenAI-compatible client (for vLLM), pgvector VectorStore -->
+    <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-model-ollama</artifactId></dependency>
+    <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-model-openai</artifactId></dependency>
+    <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-vector-store-pgvector</artifactId></dependency>
+
+    <dependency><groupId>org.bsc.langgraph4j</groupId><artifactId>langgraph4j-core</artifactId><version>${langgraph4j.version}</version></dependency>
+
+    <!-- Elasticsearch: official Java client, used with read-only calls only -->
+    <dependency><groupId>co.elastic.clients</groupId><artifactId>elasticsearch-java</artifactId><version>${elasticsearch-java.version}</version></dependency>
+
+    <dependency><groupId>io.github.resilience4j</groupId><artifactId>resilience4j-spring-boot3</artifactId><version>${resilience4j.version}</version></dependency>
+    <dependency><groupId>com.bucket4j</groupId><artifactId>bucket4j_jdk17-core</artifactId><version>${bucket4j.version}</version></dependency>
+    <dependency><groupId>org.springdoc</groupId><artifactId>springdoc-openapi-starter-webmvc-ui</artifactId><version>${springdoc.version}</version></dependency>
+    <dependency><groupId>net.logstash.logback</groupId><artifactId>logstash-logback-encoder</artifactId><version>${logstash-logback-encoder.version}</version></dependency>
+
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-test</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-testcontainers</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.testcontainers</groupId><artifactId>postgresql</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.testcontainers</groupId><artifactId>elasticsearch</artifactId><scope>test</scope></dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration><release>${java.version}</release><parameters>true</parameters></configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
