@@ -12,7 +12,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.6</version> <!-- UNVERIFIED -->
+    <version>4.0.1</version> <!-- UNVERIFIED exact patch; Spring AI 2.0.x supports Boot 4.0.x and 4.1.x -->
     <relativePath/>
   </parent>
 
@@ -24,11 +24,11 @@
 
   <properties>
     <java.version>21</java.version>
-    <spring-ai.version>1.0.3</spring-ai.version>                 <!-- UNVERIFIED -->
+    <spring-ai.version>2.0.2</spring-ai.version>                 <!-- chosen by project owner; confirm it resolves -->
     <langgraph4j.version>1.6.0</langgraph4j.version>             <!-- UNVERIFIED -->
     <elasticsearch-java.version>8.18.0</elasticsearch-java.version> <!-- UNVERIFIED; must match ES server major -->
-    <springdoc.version>2.8.9</springdoc.version>                 <!-- UNVERIFIED -->
-    <resilience4j.version>2.3.0</resilience4j.version>           <!-- UNVERIFIED -->
+    <springdoc.version>2.8.9</springdoc.version>                 <!-- UNVERIFIED and LIKELY INCOMPATIBLE with Boot 4: find the Boot-4 line -->
+    <resilience4j.version>2.3.0</resilience4j.version>           <!-- UNVERIFIED; resilience4j-spring-boot3 may not support Boot 4 -->
     <logstash-logback-encoder.version>8.1</logstash-logback-encoder.version> <!-- UNVERIFIED -->
     <bucket4j.version>8.10.1</bucket4j.version>                  <!-- UNVERIFIED -->
   </properties>

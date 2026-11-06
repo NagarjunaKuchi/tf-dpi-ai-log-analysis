@@ -6,7 +6,7 @@ is recorded here. None of these changes the approved architecture.
 | # | Topic | Decision | Reason / source |
 |---|-------|----------|-----------------|
 | 1 | Package root | `tf.dpi.ai` (Maven groupId `tf.dpi.ai`) | Requested by the project owner |
-| 2 | Java / Boot | Java 21, Spring Boot 3.x | Deck says "Java 17 / 21"; the brief says 21 |
+| 2 | Java / Boot | Java 21, **Spring Boot 4.0.x** (deviation from the brief's "3.x") | Project owner chose Spring AI 2.0.2, which requires Boot 4; Boot 3.x cannot load it. Deck only says "Spring Boot 3.x" generically |
 | 3 | Build tool | Maven | Deck says "Maven / Gradle"; the brief says Maven |
 | 4 | Embedding dimension | 1024 (BGE-M3) | **Unverified**: confirm against the deployed model before first migration |
 | 5 | MOSIP identifiers | UIN = 10 digits, VID = 16 digits; bare numbers of those lengths are masked | Not in the deck. Over-masks some epoch-second timestamps and phone numbers on purpose |

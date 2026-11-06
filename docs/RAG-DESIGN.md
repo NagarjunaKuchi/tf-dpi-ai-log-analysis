@@ -24,7 +24,6 @@ directly. `ChatClient` is used for query analysis, root-cause analysis and repor
 as clearly delimited untrusted data. Empty retrieval short-circuits to "insufficient evidence" before any LLM call;
 the augmenter's default (`allowEmptyContext=false`) matches that stance.
 
-## OPEN: Spring AI version
-The page documents **Spring AI 2.0.2**. `pom.xml` pins 1.0.3 with Boot 3.5.6. The page does not state which Spring
-Boot / Framework baseline 2.x needs, and the brief says "Spring Boot 3.x". Decide the Spring AI line, then align Boot
-and re-check the builder APIs above against that version before coding the agent.
+## Spring AI version
+Decided by the project owner: **Spring AI 2.0.2** on Spring Boot 4.0.x (see `docs/VERSIONS.md`).
+The RAG page was read for 2.0.2; builder APIs above come from it.
