@@ -140,7 +140,7 @@ public class JdbcIngestionStore implements CheckpointStore, BatchCommitter, Stor
                 "DELETE FROM log_chunk_vectors WHERE (metadata ->> 'toEpochMs')::bigint < ?", cutoff.toEpochMilli()));
     }
 
-    static UUID rowId(String chunkId) {
+    public static UUID rowId(String chunkId) {
         return UUID.nameUUIDFromBytes(chunkId.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -171,7 +171,7 @@ public class JdbcIngestionStore implements CheckpointStore, BatchCommitter, Stor
         }
     }
 
-    static String vectorLiteral(float[] v) {
+    public static String vectorLiteral(float[] v) {
         StringBuilder sb = new StringBuilder(v.length * 9).append('[');
         for (int i = 0; i < v.length; i++) {
             if (i > 0) {

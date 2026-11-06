@@ -36,6 +36,7 @@ CREATE TABLE knowledge_document (
     kind              TEXT          NOT NULL,              -- RUNBOOK | INCIDENT | PROCEDURE
     title             TEXT          NOT NULL,
     source_ref        TEXT          NOT NULL,              -- URL / path / ticket reference
+    content_sha256    CHAR(64)      NOT NULL,              -- of the sanitized text; identical re-ingest is a no-op
     validation_status TEXT          NOT NULL DEFAULT 'UNVERIFIED', -- UNVERIFIED | ENGINEER_VALIDATED
     validated_by      TEXT,
     validated_at      TIMESTAMPTZ,

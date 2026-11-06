@@ -87,7 +87,7 @@ class IngestionBeans {
     }
 
     @Bean
-    ChunkEmbedder chunkEmbedder(EmbeddingModel model, EmbeddingProperties props, JdbcIngestionStore store,
+    SpringAiChunkEmbedder chunkEmbedder(EmbeddingModel model, EmbeddingProperties props, JdbcIngestionStore store,
             ExecutorService embeddingExecutor, MeterRegistry meters) {
         return new SpringAiChunkEmbedder(model, props, store, embeddingExecutor, meters);
     }

@@ -25,7 +25,7 @@ import tf.dpi.ai.model.LogChunk;
  * Calls run on a small bounded executor so each batch can be timed out; vectors are validated (count, dimension,
  * finite values) before they can reach the database.
  */
-public class SpringAiChunkEmbedder implements ChunkEmbedder {
+public class SpringAiChunkEmbedder implements ChunkEmbedder, TextEmbedder {
 
     private final EmbeddingModel model;
     private final EmbeddingProperties props;
@@ -81,6 +81,17 @@ public class SpringAiChunkEmbedder implements ChunkEmbedder {
             generated.increment(batch.size());
         }
         return List.of(result);
+    }
+
+    /** Embeds raw (already sanitized) texts in configured batches; used by runbook ingestion. */
+    @Override
+    public List<float[]> embedTexts(List<String> texts) {
+        List<float[]> out = new ArrayList<>(texts.size());
+        for (int from = 0; from < texts.size(); from += props.batchSize()) {
+            out.addAll(embedBatch(texts.subList(from, Math.min(from + props.batchSize(), texts.size()))));
+        }
+        generated.increment(texts.size());
+        return out;
     }
 
     private List<float[]> embedBatch(List<String> texts) {

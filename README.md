@@ -20,10 +20,10 @@ lacks). Stack: Spring Boot 4.0.9, Spring AI 2.0.2, Java 21, Elasticsearch client
 | JDBC store, Flyway schema, retention job, advisory-lock scheduler | Written | 6 integration tests written but **never executed**; SQL never run on PostgreSQL |
 | Spring application context / wiring | Written | **Never started** (needs PostgreSQL); `spring.ai.model.*` selection keys unverified |
 | Embedding model migration (re-embed on version change) | Pending | |
-| Runbook / incident knowledge ingestion (Module 7) | Pending | |
-| Vector retrieval service (Spring AI `VectorStore`, filters) | Pending | |
-| LangGraph4j agent, nodes, tools (Modules 8-9) | Pending | |
-| Evidence verification (Module 10), report generation (Module 11) | Pending | |
+| Runbook / incident knowledge ingestion (Module 7) | Implemented, unit-tested (chunker only) | Versioning, masking, UNVERIFIED-by-default, atomic supersession. SQL never run on a real PostgreSQL; no HTTP endpoint yet (Phase 5) |
+| Vector retrieval service (Spring AI `VectorStore`, filters) | Implemented, compiles | `VectorStoreDocumentRetriever` + metadata filters pinned to embedding model/version. Filter-to-SQL translation unverified (no Docker) |
+| LangGraph4j agent, nodes, tools (Modules 8-9) | Implemented, 6 graph tests with a fake LLM | 9 nodes, bounded loops, timeout, explicit failure outcome. Checkpoints are in-memory (`MemorySaver`); durable PostgreSQL saver still PENDING. `SpringAiAgentLlm` never run against a real model |
+| Evidence verification (Module 10), report generation (Module 11) | Implemented, tested via graph tests | Deterministic verifier; report is data only, REST exposure in Phase 5. Engineer-review decision endpoint pending |
 | REST API, security, rate limiting, OpenAPI | Pending | |
 | LLM/vector/agent metrics, tracing, JSON logging config | Partial (ingestion + ES + embedding metrics only) | |
 | Dockerfile, Compose, Kubernetes, Helm, Grafana | Pending | |
@@ -33,6 +33,6 @@ lacks). Stack: Spring Boot 4.0.9, Spring AI 2.0.2, Java 21, Elasticsearch client
 
 1. Run `mvn test` where Docker is available to execute the pgvector integration tests and fix any SQL issues.
 2. Start the application against PostgreSQL + Ollama to validate wiring (`spring.ai.model.*`, `_id` sort key).
-3. Continue with retrieval, runbook ingestion and the LangGraph4j agent (Phase 4).
+3. Phase 5: REST APIs, auth/RBAC, rate limiting, OpenAPI, durable agent checkpoints and the engineer-review decision flow.
 
 See `docs/ASSUMPTIONS.md` for design decisions and `docs/RAG-DESIGN.md` for the retrieval design.

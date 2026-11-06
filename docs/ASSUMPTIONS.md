@@ -23,3 +23,13 @@ is recorded here. None of these changes the approved architecture.
 | 16 | Concurrency | One ingestion run per stream (cluster-wide via a PostgreSQL advisory lock); embedding calls use a bounded executor (2 threads, queue 8) | Pagination is inherently sequential; the brief asks for bounded concurrency, not parallel pagination |
 | 17 | Identifier fields | If masking would alter a trace id, service, host, error code or exception type, it is replaced by a stable hash instead | Keeps grouping correct (distinct values never collapse to one placeholder) |
 | 18 | Overlapping chunks | Context lookups can pull events that a later run also ingests as anchors, producing overlapping chunks with different ids | Accepted; retrieval can dedupe by source ids |
+
+## Phase 4 assumptions (retrieval, knowledge, agent)
+
+19. LangGraph4j state is serialised with Java serialisation by default, so all state-held records implement `Serializable`. A future PostgreSQL checkpoint saver must not deserialise rows an attacker can write; restrict DB write access to the service account.
+20. The relevance grader and evidence verifier are deterministic (no LLM) so they are reproducible and testable. The LLM is used only for query analysis, query rewriting and root-cause analysis.
+21. The LLM never selects tools or tool arguments; the graph calls `vectorSearch`, `runbookSearch` and `esQuery` directly. `esQuery` is read-only, allowlisted, window- and size-bounded, and masked.
+22. Scenario regexes (DB connection refused, OOM, ActiveMQ) are generic JVM/JMS/JDBC signatures, not tuned to real MOSIP/DPI logs; they must be validated against production samples.
+23. A finding must quote terms verbatim present in its cited evidence; this catches fabricated citations but cannot detect a correct quote used to support a wrong conclusion. Human review remains the final gate.
+24. Knowledge documents are UNVERIFIED until an engineer validates them; UNVERIFIED knowledge is still retrievable but flagged in the report. Change this if policy requires validated-only retrieval.
+25. Retrieval similarity thresholds (0.5 search, 0.6 grading) are placeholder defaults that need tuning on real data.
