@@ -120,6 +120,26 @@ class LogChunkerTest {
     }
 
     @Test
+    void uncodedContextAttachesToNearbyCodedGroupOfSameServiceAndHost() {
+        List<LogChunk> chunks = new LogChunker(ChunkingProperties.defaults()).chunk(List.of(
+                event("ctx1", 0, "svc", LogLevel.INFO, "", "", "pool resized", ""),
+                event("err", 5, "svc", LogLevel.ERROR, "", "X", "boom", ""),
+                event("ctx2", 20, "svc", LogLevel.INFO, "", "", "recovering", "")));
+        assertThat(chunks).hasSize(1);
+        assertThat(chunks.get(0).sourceIds()).containsExactly("ctx1", "err", "ctx2");
+        assertThat(chunks.get(0).errorCode()).isEqualTo("X");
+        assertThat(chunks.get(0).level()).isEqualTo(LogLevel.ERROR);
+    }
+
+    @Test
+    void uncodedEventsFarFromAnyCodedGroupStayOwnGroup() {
+        List<LogChunk> chunks = new LogChunker(ChunkingProperties.defaults()).chunk(List.of(
+                event("err", 0, "svc", LogLevel.ERROR, "", "X", "boom", ""),
+                event("lonely", 3600, "svc", LogLevel.INFO, "", "", "later info", "")));
+        assertThat(chunks).hasSize(2);
+    }
+
+    @Test
     void emptyInputYieldsNoChunks() {
         assertThat(new LogChunker(ChunkingProperties.defaults()).chunk(List.of())).isEmpty();
     }

@@ -3,6 +3,7 @@ package tf.dpi.ai.chunking;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -41,19 +42,82 @@ public final class LogChunker {
         List<LogEvent> sorted = new ArrayList<>(events);
         sorted.sort(Comparator.comparing(LogEvent::timestamp).thenComparing(LogEvent::id));
 
+        // 1. Events that identify themselves (trace id, error code or exception type) form groups by key + time.
         Map<String, List<LogEvent>> byKey = new LinkedHashMap<>();
+        List<LogEvent> loose = new ArrayList<>();
         for (LogEvent e : sorted) {
-            byKey.computeIfAbsent(groupKey(e), k -> new ArrayList<>()).add(e);
+            if (isLoose(e)) {
+                loose.add(e);
+            } else {
+                byKey.computeIfAbsent(groupKey(e), k -> new ArrayList<>()).add(e);
+            }
+        }
+        List<Group> groups = new ArrayList<>();
+        for (Map.Entry<String, List<LogEvent>> entry : byKey.entrySet()) {
+            for (List<LogEvent> g : splitByTime(entry.getValue())) {
+                groups.add(new Group(entry.getKey(), new ArrayList<>(g)));
+            }
+        }
+
+        // 2. "Loose" events (no trace, code or exception: typically INFO/DEBUG context) attach to the closest
+        //    identified group of the same service and host; otherwise they form their own time-based groups.
+        Map<String, List<LogEvent>> orphans = new LinkedHashMap<>();
+        for (LogEvent e : loose) {
+            Group target = closestGroup(groups, e);
+            if (target != null) {
+                target.events.add(e);
+            } else {
+                orphans.computeIfAbsent(groupKey(e), k -> new ArrayList<>()).add(e);
+            }
+        }
+        for (Map.Entry<String, List<LogEvent>> entry : orphans.entrySet()) {
+            for (List<LogEvent> g : splitByTime(entry.getValue())) {
+                groups.add(new Group(entry.getKey(), new ArrayList<>(g)));
+            }
         }
 
         List<LogChunk> chunks = new ArrayList<>();
-        for (Map.Entry<String, List<LogEvent>> entry : byKey.entrySet()) {
-            for (List<LogEvent> group : splitByTime(entry.getValue())) {
-                chunks.addAll(toChunks(entry.getKey(), group));
-            }
+        for (Group g : groups) {
+            g.events.sort(Comparator.comparing(LogEvent::timestamp).thenComparing(LogEvent::id));
+            chunks.addAll(toChunks(g.key, g.events));
         }
         chunks.sort(Comparator.comparing(LogChunk::fromTimestamp).thenComparing(LogChunk::chunkId));
         return chunks;
+    }
+
+    private static boolean isLoose(LogEvent e) {
+        return e.traceId().isBlank() && e.errorCode().isBlank() && e.exceptionType().isBlank();
+    }
+
+    private Group closestGroup(List<Group> groups, LogEvent e) {
+        Group best = null;
+        long bestDistance = Long.MAX_VALUE;
+        String prefix = "svc:" + e.service() + "|host:" + e.host() + "|";
+        for (Group g : groups) {
+            if (!g.key.startsWith(prefix)) {
+                continue;
+            }
+            Instant first = g.events.get(0).timestamp();
+            Instant last = g.events.get(g.events.size() - 1).timestamp();
+            Instant t = e.timestamp();
+            long distance = t.isBefore(first) ? Duration.between(t, first).toMillis()
+                    : t.isAfter(last) ? Duration.between(last, t).toMillis() : 0;
+            if (distance <= props.maxGap().toMillis() && distance < bestDistance) {
+                best = g;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
+    private static final class Group {
+        final String key;
+        final List<LogEvent> events;
+
+        Group(String key, List<LogEvent> events) {
+            this.key = key;
+            this.events = events;
+        }
     }
 
     static String groupKey(LogEvent e) {
@@ -72,8 +136,8 @@ public final class LogChunker {
             if (!current.isEmpty()) {
                 Instant prev = current.get(current.size() - 1).timestamp();
                 Instant first = current.get(0).timestamp();
-                boolean gap = java.time.Duration.between(prev, e.timestamp()).compareTo(props.maxGap()) > 0;
-                boolean span = java.time.Duration.between(first, e.timestamp()).compareTo(props.maxSpan()) > 0;
+                boolean gap = Duration.between(prev, e.timestamp()).compareTo(props.maxGap()) > 0;
+                boolean span = Duration.between(first, e.timestamp()).compareTo(props.maxSpan()) > 0;
                 if (gap || span) {
                     groups.add(current);
                     current = new ArrayList<>();

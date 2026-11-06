@@ -4,32 +4,35 @@ Agentic RAG incident analysis on top of the existing Logstash → Elasticsearch 
 Architecture source of truth: *AI-POC-DPITeam_Enhanced.pptx* (Spring Boot + Spring AI, PostgreSQL + pgvector,
 LangGraph4j, self-hosted Ollama/vLLM, engineer validation as the final gate).
 
-## Status: foundation only — NOT production ready
+## Status: Phases 2-3 in progress — NOT production ready
 
-Build verified: `mvn test-compile` succeeds and 33 unit tests pass (Spring Boot 4.0.9, Spring AI 2.0.2, Java 21).
-Everything marked Pending has no code yet.
+`mvn test`: 79 tests pass, 6 skipped (Testcontainers/pgvector tests need Docker, which the authoring environment
+lacks). Stack: Spring Boot 4.0.9, Spring AI 2.0.2, Java 21, Elasticsearch client 8.19.24.
 
 | Component | State | Verification |
 |-----------|-------|--------------|
-| Maven `pom.xml` | Written | Resolves and compiles; versions verified to exist (`docs/VERSIONS.md`). LangGraph4j, Spring AI and Elasticsearch APIs not yet exercised |
-| Domain model, masking (12 categories, fail-closed), JSON masker, chunking | Implemented | 33 JUnit tests pass (`MaskingEngineTest` 24, `LogChunkerTest` 9) |
-| Flyway `V1` schema (pgvector, HNSW, checkpoints, dead letter, analysis state) | Written | **Not applied** to a real PostgreSQL yet |
-| `application.yml` | Skeleton | Not loaded (no Spring context test yet) |
-| Elasticsearch integration (Module 1) | Pending | |
-| Incremental ingestion pipeline (Module 2) | Pending | |
-| Embedding service (Module 5) | Pending | |
-| pgvector repositories / retrieval (Module 6) | Pending | |
-| Runbook ingestion (Module 7) | Pending | |
+| Build / dependencies | Done | Resolves and compiles (`docs/VERSIONS.md`) |
+| Masking (12 categories, JSON-aware, fail-closed) + event sanitizer | Done | 24 unit tests |
+| Log grouping and chunking | Done | 11 unit tests |
+| Elasticsearch module (client+TLS+auth, query builder, mapper, read-only reader with bounded retry, health) | Done | 22 unit tests with a mocked client. **Not run against a real cluster** |
+| Embedding service (Spring AI `EmbeddingModel`, batching, timeout, dimension check, duplicate guard) | Done | 8 unit tests with a mocked model. **Not run against Ollama/vLLM** |
+| Incremental ingestion (checkpoint, dead letter, retry, atomic commit, graceful stop) | Done | 14 unit tests with fakes |
+| JDBC store, Flyway schema, retention job, advisory-lock scheduler | Written | 6 integration tests written but **never executed**; SQL never run on PostgreSQL |
+| Spring application context / wiring | Written | **Never started** (needs PostgreSQL); `spring.ai.model.*` selection keys unverified |
+| Embedding model migration (re-embed on version change) | Pending | |
+| Runbook / incident knowledge ingestion (Module 7) | Pending | |
+| Vector retrieval service (Spring AI `VectorStore`, filters) | Pending | |
 | LangGraph4j agent, nodes, tools (Modules 8-9) | Pending | |
-| Evidence verification (Module 10) | Pending | |
-| Report generation (Module 11) | Pending | |
+| Evidence verification (Module 10), report generation (Module 11) | Pending | |
 | REST API, security, rate limiting, OpenAPI | Pending | |
-| Observability, Dockerfile, Compose, K8s, Helm | Pending | |
-| End-to-end scenarios, Testcontainers tests | Pending | |
+| LLM/vector/agent metrics, tracing, JSON logging config | Partial (ingestion + ES + embedding metrics only) | |
+| Dockerfile, Compose, Kubernetes, Helm, Grafana | Pending | |
+| End-to-end scenarios | Pending | |
 
-## Next step to unblock
+## Next steps
 
-Run `mvn -q -DskipTests compile` somewhere with Maven Central (or an internal mirror) access, then confirm the
-versions in `docs/VERSIONS.md`. Phases 2–7 of the brief continue from there, compiling and testing at each phase.
+1. Run `mvn test` where Docker is available to execute the pgvector integration tests and fix any SQL issues.
+2. Start the application against PostgreSQL + Ollama to validate wiring (`spring.ai.model.*`, `_id` sort key).
+3. Continue with retrieval, runbook ingestion and the LangGraph4j agent (Phase 4).
 
-See `docs/ASSUMPTIONS.md` for design decisions.
+See `docs/ASSUMPTIONS.md` for design decisions and `docs/RAG-DESIGN.md` for the retrieval design.

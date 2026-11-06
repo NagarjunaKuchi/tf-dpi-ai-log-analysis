@@ -20,6 +20,9 @@ spring:
   flyway:
     enabled: true
   ai:
+    model:
+      chat: ollama        # switch both to 'openai' to use an OpenAI-compatible vLLM server
+      embedding: ollama
     ollama:
       base-url: ${DPI_OLLAMA_URL:http://ollama:11434}
       chat:
@@ -31,6 +34,13 @@ spring:
           model: ${DPI_EMBEDDING_MODEL:bge-m3}
   lifecycle:
     timeout-per-shutdown-phase: 60s
+  task:
+    scheduling:
+      pool:
+        size: 2
+      shutdown:
+        await-termination: true
+        await-termination-period: 60s
 
 server:
   shutdown: graceful
@@ -80,11 +90,16 @@ dpi:
     timeout: 30s
   ingestion:
     enabled: ${DPI_INGESTION_ENABLED:true}
+    stream-name: ${DPI_INGESTION_STREAM:logstash}
     batch-size: 500
-    max-concurrent-batches: 2
+    max-batches-per-run: 20
     max-batch-attempts: 3
+    retry-backoff: 2s
     interval: 5m
+    lookback: 24h
+    min-level: WARN
     retention: 30d
+    shutdown-grace: 60s
   agent:
     max-retrieval-retries: 2
     max-verification-retries: 2
