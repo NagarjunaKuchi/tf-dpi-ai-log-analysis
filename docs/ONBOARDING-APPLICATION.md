@@ -9,6 +9,12 @@ shared with this deployment.
 Use an account with only `read` and `view_index_metadata` on that application's indices.
 
 ## 2. Field names (`dpi.elasticsearch.fields.*`)
+**The defaults match the MOSIP/DPI Logstash documents** (checked against two real documents, see `src/test/resources/samples` and `RealDocumentMappingTest`):
+`@timestamp`, `level`, `message`, `traceId`, service = `kubernetes.container_name`, host = `kubernetes.pod_name`. Those documents have no error-code and no
+stack-trace field, so both are derived from `message`: the error code with `mapping.error-code-pattern` (default matches MOSIP codes like `IDR-IDC-004`), and a Java
+stack trace logged inside the message is split off at its first `at pkg.Class.method(...)` line (the exception type comes from the message head). Strings in these
+indices are dynamically mapped (`text` + `.keyword`), so filters use `dpi.elasticsearch.keyword-suffix` (default `.keyword`); an error-code filter searches the message text.
+
 Dot paths into `_source`. Both a literal dotted key (`"log.level": "ERROR"`) and a nested object (`{"log": {"level": "ERROR"}}`) are read.
 Keys: `timestamp` (default `@timestamp`), `service`, `host`, `level`, `message`, `trace-id`, `error-code`, `exception-type`, `stack-trace`
 (default `stack_trace`). A missing optional field becomes empty; a missing or unreadable timestamp rejects that record (counted, not stored).
@@ -19,7 +25,8 @@ Keys: `timestamp` (default `@timestamp`), `service`, `host`, `level`, `message`,
 | `timestamp-formats` | `[iso, epoch_millis]` | Tried in order. Also `epoch_seconds` or a `java.time.format.DateTimeFormatter` pattern, e.g. `dd/MMM/yyyy:HH:mm:ss Z`. Numeric values are milliseconds unless only `epoch_seconds` is listed. |
 | `timestamp-zone` | `UTC` | Zone for patterns that carry no offset. A pattern with an offset uses that offset. |
 | `level-aliases` | none | Extra spellings, e.g. `E: ERROR`, `"3": ERROR`. Built-in: TRACE/FINEST, DEBUG/FINE, WARN/WARNING, ERROR/SEVERE, FATAL/CRITICAL/EMERGENCY/ALERT. |
-| `exception-pattern` | built-in Java pattern | Regex with the exception type in group 1, applied to the first 1000 characters of the stack trace only when the exception-type field is empty. |
+| `error-code-pattern` | `\b([A-Z]{2,5}-[A-Z]{2,5}-\d{3,4})\b` | Applied to the message when the error-code field is empty (group 1, or the whole match). Empty = no extraction. |
+| `exception-pattern` | built-in Java pattern | Regex with the exception type in group 1, applied to the first 1000 characters of the stack trace, then of the message, only when the exception-type field is empty. |
 
 Invalid values stop the service at startup (they never fall back silently). Environment variables work through relaxed binding, e.g.
 `DPI_ELASTICSEARCH_FIELDS_SERVICE=kubernetes.container.name`, `DPI_ELASTICSEARCH_MAPPING_TIMESTAMPFORMATS_0=iso`,

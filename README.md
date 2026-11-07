@@ -32,7 +32,7 @@ Spring AI 2.0.2, Java 21, LangGraph4j 1.9.8, Elasticsearch client 8.19.24.
 
 ## Not verified (must be done before any production claim)
 
-1. Real Elasticsearch 8.19.24 with the actual Logstash field mapping (flat field names and the `_id` sort tiebreaker are assumptions).
+1. Real Elasticsearch 8.19.24: the default field mapping now follows two real documents, but no query has run against a cluster, and the `_id` sort tiebreaker is known to fail on a default 8.x cluster (docs/ASSUMPTIONS.md #13).
 2. A real Ollama / vLLM chat model (structured-output reliability) and the real BGE-M3 embedding model (retrieval quality, 1024 dimensions).
 3. A production identity provider setup (Keycloak token validation is tested locally against Keycloak 26.8.2, see docs/OPERATIONS.md); the Docker image, Compose stack, Helm install, NetworkPolicy enforcement and Grafana import.
 4. Production PostgreSQL / pgvector versions, load and capacity behaviour (no performance test exists), a dependency CVE scan.

@@ -1,0 +1,42 @@
+{
+  "_index": "logstash-2026.11.07",
+  "_id": "reJAuKEBDmlILneWWmja",
+  "_source": {
+    "time": "2026-11-08T02:01:08.350732852+03:00",
+    "stream": "stdout",
+    "logtag": "F",
+    "message": "SESSIONID - REGISTRATIONID - 10001000100010020250101000000 - Utilities::retrieveUIN():: error with error message Invalid UIN [ErrorDTO(errorCode=IDR-IDC-007, message=No Record(s) found)]",
+    "kubernetes": {
+      "pod_name": "regproc-notifier-f5d84fd4-zlrqw",
+      "namespace_name": "regproc",
+      "pod_id": "00000000-0000-0000-0000-000000000000",
+      "labels": {
+        "app.kubernetes.io/instance": "regproc-notifier",
+        "app.kubernetes.io/managed-by": "Helm",
+        "app.kubernetes.io/name": "regproc-notifier",
+        "helm.sh/chart": "regproc-notifier-12.0.1-prod",
+        "pod-template-hash": "f5d84fd4"
+      },
+      "annotations": {
+        "cattle.io/timestamp": "2026-05-27T04:44:07Z",
+        "cni.projectcalico.org/containerID": "0000000000000000000000000000000000000000000000000000000000000000",
+        "cni.projectcalico.org/podIP": "10.0.0.1/32",
+        "cni.projectcalico.org/podIPs": "10.0.0.1/32",
+        "kubectl.kubernetes.io/restartedAt": "2026-04-11T15:46:14+03:00",
+        "prometheus.io/scrape": "true"
+      },
+      "host": "control-subsequent-plane-4",
+      "container_name": "regproc-notifier",
+      "docker_id": "0000000000000000000000000000000000000000000000000000000000000000",
+      "container_hash": "docker.io/niradocker/registration-processor-notification-service@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "container_image": "docker.io/niradocker/registration-processor-notification-service:prod-16082026"
+    },
+    "@timestamp": "2026-11-07T23:01:08.350Z",
+    "@version": "1",
+    "logger_name": "io.mosip.registration.processor.packet.storage.utils.Utilities",
+    "thread_name": "pool-1-thread-9",
+    "level": "ERROR",
+    "level_value": 40000,
+    "appName": "application,registration-processor"
+  }
+}

@@ -14,6 +14,6 @@ final class ElasticsearchTestSupport {
                 java.time.Duration.ofSeconds(30), java.time.Duration.ofSeconds(30), 50,
                 new ElasticsearchProperties.Fields("@timestamp", "service", "host", "level", "message", "traceId",
                         "errorCode", "exceptionType", "stack_trace"),
-                ElasticsearchProperties.Mapping.defaults());
+                ElasticsearchProperties.Mapping.defaults(), ".keyword");
     }
 }

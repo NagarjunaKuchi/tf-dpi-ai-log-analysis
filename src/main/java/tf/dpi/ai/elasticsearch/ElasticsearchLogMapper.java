@@ -24,12 +24,15 @@ import tf.dpi.ai.model.LogLevel;
 public class ElasticsearchLogMapper implements LogEventMapper {
 
     private static final Pattern DEFAULT_EXCEPTION_HEAD =
-            Pattern.compile("^\\s*([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)+(?:Exception|Error|Throwable))\\b");
+            Pattern.compile("([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)+(?:Exception|Error|Throwable))\\b");
+    /** First line of a Java stack trace frame ("\tat pkg.Class.method(File.java:12)"); everything from here on is the trace. */
+    private static final Pattern FRAME_START = Pattern.compile("(?m)^[ \\t]*at [\\w$.<>/]+\\(");
     /** The exception pattern only looks at the start of the trace, which bounds the cost of an operator-supplied regex. */
     private static final int EXCEPTION_SCAN_CHARS = 1000;
 
     private final ElasticsearchProperties.Fields fields;
     private final Pattern exceptionHead;
+    private final Pattern errorCodePattern;
     private final List<TimestampFormat> timestampFormats;
     private final Map<String, LogLevel> levelAliases;
     private final boolean numericAsSeconds;
@@ -41,6 +44,7 @@ public class ElasticsearchLogMapper implements LogEventMapper {
     public ElasticsearchLogMapper(ElasticsearchProperties.Fields fields, ElasticsearchProperties.Mapping mapping) {
         this.fields = fields;
         this.exceptionHead = compileExceptionPattern(mapping.exceptionPattern());
+        this.errorCodePattern = compileErrorCodePattern(mapping.errorCodePattern());
         ZoneId zone;
         try {
             zone = ZoneId.of(mapping.timestampZone());
@@ -64,6 +68,17 @@ public class ElasticsearchLogMapper implements LogEventMapper {
             }
         });
         this.levelAliases = Map.copyOf(aliases);
+    }
+
+    private static Pattern compileErrorCodePattern(String configured) {
+        if (configured == null || configured.isBlank()) {
+            return null;
+        }
+        try {
+            return Pattern.compile(configured);
+        } catch (PatternSyntaxException e) {
+            throw new IllegalArgumentException("dpi.elasticsearch.mapping.error-code-pattern is not a valid regular expression");
+        }
     }
 
     private static Pattern compileExceptionPattern(String configured) {
@@ -91,14 +106,27 @@ public class ElasticsearchLogMapper implements LogEventMapper {
             throw new CorruptLogRecordException(documentId, "document has no _source object");
         }
         Instant timestamp = parseTimestamp(documentId, resolve(source, fields.timestamp()));
+        String message = text(resolve(source, fields.message()));
         String stackTrace = text(resolve(source, fields.stackTrace()));
+        String exceptionScanText = stackTrace;
+        if (stackTrace.isBlank()) {
+            // Many applications log the whole exception inside the message: split off the frames so message and trace are separate.
+            Matcher frames = FRAME_START.matcher(message);
+            if (frames.find() && frames.start() > 0 && !message.substring(0, frames.start()).isBlank()) {
+                stackTrace = message.substring(frames.start()).stripTrailing();
+                message = message.substring(0, frames.start()).stripTrailing();
+            }
+        }
         String exceptionType = text(resolve(source, fields.exceptionType()));
         if (exceptionType.isBlank()) {
-            Matcher m = exceptionHead.matcher(stackTrace.length() > EXCEPTION_SCAN_CHARS
-                    ? stackTrace.substring(0, EXCEPTION_SCAN_CHARS) : stackTrace);
-            if (m.find() && m.group(1) != null) {
-                exceptionType = m.group(1);
+            exceptionType = firstMatch(exceptionHead, exceptionScanText);
+            if (exceptionType.isBlank()) {
+                exceptionType = firstMatch(exceptionHead, message);
             }
+        }
+        String errorCode = text(resolve(source, fields.errorCode()));
+        if (errorCode.isBlank() && errorCodePattern != null) {
+            errorCode = firstMatch(errorCodePattern, message);
         }
         return new LogEvent(
                 documentId,
@@ -108,11 +136,24 @@ public class ElasticsearchLogMapper implements LogEventMapper {
                 text(resolve(source, fields.host())),
                 parseLevel(text(resolve(source, fields.level()))),
                 text(resolve(source, fields.traceId())),
-                text(resolve(source, fields.errorCode())),
+                errorCode,
                 exceptionType,
-                text(resolve(source, fields.message())),
+                message,
                 stackTrace,
                 java.util.Map.of());
+    }
+
+    /** First match of the pattern (group 1 when present, else the whole match) in the first characters of the text; "" if none. */
+    private static String firstMatch(Pattern pattern, String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        Matcher m = pattern.matcher(text.length() > EXCEPTION_SCAN_CHARS ? text.substring(0, EXCEPTION_SCAN_CHARS) : text);
+        if (!m.find()) {
+            return "";
+        }
+        String g = m.groupCount() >= 1 ? m.group(1) : m.group();
+        return g == null ? "" : g;
     }
 
     private LogLevel parseLevel(String raw) {

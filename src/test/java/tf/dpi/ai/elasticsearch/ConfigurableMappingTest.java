@@ -23,7 +23,7 @@ class ConfigurableMappingTest {
     }
 
     private static ElasticsearchLogMapper mapper(List<String> formats, String zone, Map<String, String> aliases, String pattern) {
-        return new ElasticsearchLogMapper(FIELDS, new ElasticsearchProperties.Mapping(formats, zone, aliases, pattern));
+        return new ElasticsearchLogMapper(FIELDS, new ElasticsearchProperties.Mapping(formats, zone, aliases, pattern, ""));
     }
 
     @Test
@@ -88,7 +88,7 @@ class ConfigurableMappingTest {
         assertThatThrownBy(() -> mapper(List.of("iso"), "UTC", Map.of(), "([unclosed")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> mapper(List.of("iso"), "UTC", Map.of(), "no-group")).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("capturing group");
-        assertThatThrownBy(() -> new ElasticsearchProperties.Mapping(List.of(), "UTC", Map.of(), ""))
+        assertThatThrownBy(() -> new ElasticsearchProperties.Mapping(List.of(), "UTC", Map.of(), "", ""))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

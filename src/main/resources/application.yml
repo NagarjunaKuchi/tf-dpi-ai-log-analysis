@@ -84,8 +84,10 @@ dpi:
     page-size: 500
     max-retries: 3
     initial-backoff: 500ms
-    # Per-application mapping (see docs/ONBOARDING-APPLICATION.md). Defaults suit a flat Logstash layout:
-    # fields: { service: kubernetes.container.name, level: log.level, stack-trace: error.stack_trace }
+    # Defaults match the MOSIP/DPI Logstash documents (see docs/ONBOARDING-APPLICATION.md): service=kubernetes.container_name,
+    # host=kubernetes.pod_name, level, traceId, @timestamp; error code and stack trace are derived from the message.
+    # keyword-suffix: .keyword          # exact-value sub-field used for filters (dynamic mapping); "" if the fields are keywords
+    # fields: { service: kubernetes.container_name, level: level, stack-trace: stack_trace }
     # mapping:
     #   timestamp-formats: [iso, "dd/MMM/yyyy:HH:mm:ss Z"]   # iso | epoch_millis | epoch_seconds | DateTimeFormatter pattern
     #   timestamp-zone: UTC                                  # for patterns without an offset

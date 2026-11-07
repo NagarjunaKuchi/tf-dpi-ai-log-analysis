@@ -43,21 +43,34 @@ public class ElasticsearchQueryBuilder {
         }
         if (r.minLevel() != null) {
             List<FieldValue> levels = levelSpellings(r.minLevel());
-            bool.filter(q -> q.terms(t -> t.field(f.level()).terms(tv -> tv.value(levels))));
+            bool.filter(q -> q.terms(t -> t.field(kw(f.level())).terms(tv -> tv.value(levels))));
         }
         if (!r.services().isEmpty()) {
-            bool.filter(q -> q.terms(t -> t.field(f.service()).terms(tv -> tv.value(values(r.services())))));
+            bool.filter(q -> q.terms(t -> t.field(kw(f.service())).terms(tv -> tv.value(values(r.services())))));
         }
         if (!r.hosts().isEmpty()) {
-            bool.filter(q -> q.terms(t -> t.field(f.host()).terms(tv -> tv.value(values(r.hosts())))));
+            bool.filter(q -> q.terms(t -> t.field(kw(f.host())).terms(tv -> tv.value(values(r.hosts())))));
         }
         if (r.traceId() != null && !r.traceId().isBlank()) {
-            bool.filter(q -> q.term(t -> t.field(f.traceId()).value(r.traceId())));
+            bool.filter(q -> q.term(t -> t.field(kw(f.traceId())).value(r.traceId())));
         }
         if (r.errorCode() != null && !r.errorCode().isBlank()) {
-            bool.filter(q -> q.term(t -> t.field(f.errorCode()).value(r.errorCode())));
+            if (f.errorCode().isBlank()) {
+                // the documents have no error-code field: the code only exists inside the message text
+                bool.filter(q -> q.matchPhrase(mp -> mp.field(f.message()).query(r.errorCode())));
+            } else {
+                bool.filter(q -> q.term(t -> t.field(kw(f.errorCode())).value(r.errorCode())));
+            }
         }
         return Query.of(q -> q.bool(bool.build()));
+    }
+
+    /**
+     * Filter fields are matched on their exact-value sub-field (default {@code .keyword}); the main field is analysed text in a
+     * dynamically mapped index, where a term such as {@code regproc-notifier} would never match.
+     */
+    private String kw(String field) {
+        return field + props.keywordSuffix();
     }
 
     /** Full paged search request: ordered by timestamp then tiebreaker, resumed with search_after. */
@@ -85,11 +98,11 @@ public class ElasticsearchQueryBuilder {
         BoolQuery.Builder bool = new BoolQuery.Builder();
         bool.filter(q -> q.range(rq -> rq.date(d -> d.field(f.timestamp()).gte(from.toString()).lt(to.toString()))));
         if (traceId != null && !traceId.isBlank()) {
-            bool.filter(q -> q.term(t -> t.field(f.traceId()).value(traceId)));
+            bool.filter(q -> q.term(t -> t.field(kw(f.traceId())).value(traceId)));
         } else {
-            bool.filter(q -> q.term(t -> t.field(f.service()).value(service)));
+            bool.filter(q -> q.term(t -> t.field(kw(f.service())).value(service)));
             if (host != null && !host.isBlank()) {
-                bool.filter(q -> q.term(t -> t.field(f.host()).value(host)));
+                bool.filter(q -> q.term(t -> t.field(kw(f.host())).value(host)));
             }
         }
         Query query = Query.of(q -> q.bool(bool.build()));

@@ -1,0 +1,50 @@
+{
+  "_index": "logstash-2026.11.07",
+  "_id": "yuA-uKEBDmlILneWtfs6",
+  "_source": {
+    "time": "2026-11-08T02:00:13.838504264+03:00",
+    "stream": "stdout",
+    "logtag": "F",
+    "message": "service-account-mosip-regproc-client - RestHelper - requestAsync - io.mosip.idrepository.core.exception.RestServiceException: IDR-IDC-004 --> Unknown error occurred; \nnested exception is com.fasterxml.jackson.core.JsonParseException: Unrecognized token 'upstream': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')\n at [Source: (byte[])\"upstream connect error or disconnect/reset before headers. reset reason: connection termination\"; line: 1, column: 10]\n\tat io.mosip.idrepository.core.helper.RestHelper.handleStatusError(RestHelper.java:288)\n\tat io.mosip.idrepository.core.helper.RestHelper.requestSync(RestHelper.java:136)\n\tat io.mosip.idrepository.core.helper.RestHelper.requestAsync(RestHelper.java:162)\n\tat io.mosip.idrepository.core.helper.RestHelper$$FastClassBySpringCGLIB$$75e2c21e.invoke(<generated>)\n\tat org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:204)\n\tat org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:746)\n\tat org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)\n\tat org.springframework.aop.aspectj.MethodInvocationProceedingJoinPoint.proceed(MethodInvocationProceedingJoinPoint.java:88)\n\tat org.springframework.cloud.sleuth.instrument.async.TraceAsyncAspect.traceBackgroundThread(TraceAsyncAspect.java:65)\n\tat jdk.internal.reflect.GeneratedMethodAccessor252.invoke(Unknown Source)\n\tat java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.base/java.lang.reflect.Method.invoke(Method.java:566)\n\tat org.springframework.aop.aspectj.AbstractAspectJAdvice.invokeAdviceMethodWithGivenArgs(AbstractAspectJAdvice.java:644)\n\tat org.springframework.aop.aspectj.AbstractAspectJAdvice.invokeAdviceMethod(AbstractAspectJAdvice.java:633)\n\tat org.springframework.aop.aspectj.AspectJAroundAdvice.invoke(AspectJAroundAdvice.java:70)\n\tat org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:185)\n\tat org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(ExposeInvocationInterceptor.java:92)\n\tat org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:185)\n\tat org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:115)\n\tat org.springframework.aop.interceptor.AsyncExecutionAspectSupport.lambda$doSubmit$0(AsyncExecutionAspectSupport.java:270)\n\tat java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1700)\n\tat org.springframework.cloud.sleuth.instrument.async.TraceRunnable.run(TraceRunnable.java:62)\n\tat java.base/java.lang.Thread.run(Thread.java:829)\nCaused by: com.fasterxml.jackson.core.JsonParseException: Unrecognized token 'upstream': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')\n at [Source: (byte[])\"upstream connect error or disconnect/reset before headers. reset reason: connection termination\"; line: 1, column: 10]\n\tat com.fasterxml.jackson.core.JsonParser._constructError(JsonParser.java:2337)\n\tat com.fasterxml.jackson.core.base.ParserMinimalBase._reportError(ParserMinimalBase.java:720)\n\tat com.fasterxml.jackson.core.json.UTF8StreamJsonParser._reportInvalidToken(UTF8StreamJsonParser.java:3593)\n\tat com.fasterxml.jackson.core.json.UTF8StreamJsonParser._handleUnexpectedValue(UTF8StreamJsonParser.java:2688)\n\tat com.fasterxml.jackson.core.json.UTF8StreamJsonParser._nextTokenNotInObject(UTF8StreamJsonParser.java:870)\n\tat com.fasterxml.jackson.core.json.UTF8StreamJsonParser.nextToken(UTF8StreamJsonParser.java:762)\n\tat com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4684)\n\tat com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3609)\n\tat io.mosip.idrepository.core.helper.RestHelper.handleStatusError(RestHelper.java:283)\n\t... 22 more\n",
+    "kubernetes": {
+      "pod_name": "identity-57d5dcf9f5-2zhxg",
+      "namespace_name": "idrepo",
+      "pod_id": "00000000-0000-0000-0000-000000000000",
+      "labels": {
+        "app.kubernetes.io/instance": "identity",
+        "app.kubernetes.io/managed-by": "Helm",
+        "app.kubernetes.io/name": "identity",
+        "helm.sh/chart": "identity-12.0.1-prod",
+        "pod-template-hash": "57d5dcf9f5"
+      },
+      "annotations": {
+        "cattle.io/timestamp": "2026-11-05T15:35:44Z",
+        "cni.projectcalico.org/containerID": "0000000000000000000000000000000000000000000000000000000000000000",
+        "cni.projectcalico.org/podIP": "10.0.0.1/32",
+        "cni.projectcalico.org/podIPs": "10.0.0.1/32",
+        "kubectl.kubernetes.io/restartedAt": "2026-11-06T02:10:38+03:00",
+        "prometheus.io/scrape": "true"
+      },
+      "host": "agent-3",
+      "container_name": "identity",
+      "docker_id": "0000000000000000000000000000000000000000000000000000000000000000",
+      "container_hash": "docker.io/niradocker/id-repository-identity-service@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "container_image": "docker.io/niradocker/id-repository-identity-service:prod-08092026"
+    },
+    "@timestamp": "2026-11-07T23:00:13.838Z",
+    "@version": "1",
+    "logger_name": "io.mosip.idrepository.core.helper.RestHelper",
+    "thread_name": "SimpleAsyncTaskExecutor-107779",
+    "level": "ERROR",
+    "level_value": 40000,
+    "appName": "id-repository",
+    "traceId": "de072ff369622d6c",
+    "spanId": "0dc4e54475eae06e",
+    "spanExportable": "false",
+    "X-Span-Export": "false",
+    "X-B3-SpanId": "0dc4e54475eae06e",
+    "X-B3-ParentSpanId": "de072ff369622d6c",
+    "X-B3-TraceId": "de072ff369622d6c",
+    "parentId": "de072ff369622d6c"
+  }
+}

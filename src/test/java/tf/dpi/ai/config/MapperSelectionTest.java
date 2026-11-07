@@ -28,7 +28,7 @@ class MapperSelectionTest {
                     java.time.Duration.ofSeconds(30), 50,
                     new ElasticsearchProperties.Fields("@timestamp", "service", "host", "level", "message", "traceId",
                             "errorCode", "exceptionType", "stack_trace"),
-                    ElasticsearchProperties.Mapping.defaults()));
+                    ElasticsearchProperties.Mapping.defaults(), ".keyword"));
 
     private static LogEventMapper mapperOf(LogSource source) throws Exception {
         Field f = source.getClass().getDeclaredField("mapper");
