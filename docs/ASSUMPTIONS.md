@@ -51,3 +51,9 @@ is recorded here. None of these changes the approved architecture.
 35. Tests use a deterministic hashing embedding model; they prove plumbing and filters, not semantic retrieval quality with BGE-M3.
 36. End-to-end scenarios use a scripted LLM, so they prove the pipeline, the verifier and the report contract, not how a real model behaves (it may produce malformed structured output, which ends in a FAILED outcome).
 37. No distributed tracing is configured.
+38. Keycloak (26.8.2) is the reference identity provider. The dev realm is import-only (no users, no passwords); user and role provisioning, password policy, MFA and account lifecycle are operated in Keycloak, not in this service.
+39. Tokens must carry `aud` = `DPI_JWT_AUDIENCE`. Keycloak does not add the client id to `aud` on its own; the imported realm has an audience mapper. A realm without it will get 401 for every request.
+40. `iss` and key retrieval are configured separately because in containers the token's `iss` (public/`localhost` hostname) is usually not the address the service uses to reach Keycloak. Only RS256 is accepted.
+41. Access tokens are validated offline (signature + claims); there is no revocation check or introspection. A disabled user keeps access until the token expires (15 min in the dev realm). Short token lifetimes are the mitigation.
+42. Roles are read from `roles`, `realm_access.roles` and `resource_access.<audience>.roles` and must match `[A-Z_]{2,40}`; a role mapped in any other claim is ignored.
+43. The dev Keycloak (`start-dev`, H2, HTTP) is for development only; the Compose/Terraform/Helm wiring for it has been statically validated but not run (no Docker daemon in the authoring environment).

@@ -1,5 +1,8 @@
 # cp terraform.tfvars.example terraform.tfvars   (terraform.tfvars is git-ignored; never commit secrets)
-jwt_issuer_uri = "https://idp.example.org/realms/dpi"
+# Identity: by default a DEV-MODE Keycloak is started (realm "dpi"). To use your own OIDC provider instead:
+# deploy_keycloak = false
+# jwt_issuer_uri  = "https://idp.example.org/realms/dpi"   # exactly the token's `iss`
+# jwk_set_uri     = ""                                      # optional; set when the issuer URL is not reachable from the container
 es_uris        = "https://host.docker.internal:9200"
 # es_username = ""
 # es_password = ""

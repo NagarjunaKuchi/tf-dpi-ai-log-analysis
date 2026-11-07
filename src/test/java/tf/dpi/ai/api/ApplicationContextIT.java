@@ -31,7 +31,6 @@ import tf.dpi.ai.support.TestDatabase;
 @EnabledIfEnvironmentVariable(named = "DPI_TEST_JDBC_URL", matches = ".+")
 @SpringBootTest(properties = {
         "spring.flyway.clean-disabled=true",
-        "spring.security.oauth2.resourceserver.jwt.issuer-uri=http://127.0.0.1:9/issuer",
         "dpi.security.jwt-issuer-uri=http://127.0.0.1:9/issuer",
         "spring.ai.ollama.base-url=http://127.0.0.1:9",
         "dpi.elasticsearch.uris=http://127.0.0.1:9",

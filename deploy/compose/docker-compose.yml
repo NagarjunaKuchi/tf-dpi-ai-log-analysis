@@ -1,5 +1,7 @@
-# Local/dev stack. Elasticsearch and the identity provider are EXTERNAL (read-only access to the existing ELK, a JWT issuer you
-# operate). Not run in the authoring environment (no Docker daemon). Image tags are unverified; pin them.
+# Local/dev stack. Elasticsearch is EXTERNAL (read-only access to the existing ELK).
+# Identity: `docker compose --profile keycloak up` also starts a DEV-MODE Keycloak (realm "dpi" imported from deploy/keycloak) and the
+# app trusts it by default. Without the profile, set DPI_JWT_ISSUER_URI (and DPI_JWK_SET_URI if the issuer URL is not reachable from the
+# container) to your own OIDC provider. Not run in the authoring environment (no Docker daemon). Pin image tags.
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -27,6 +29,19 @@ services:
     entrypoint: ["/bin/sh", "-c", "ollama pull ${DPI_CHAT_MODEL:-llama3.1:8b} && ollama pull ${DPI_EMBEDDING_MODEL:-bge-m3}"]
     restart: "no"
 
+  keycloak:      # DEV ONLY: start-dev uses an embedded H2 database and plain HTTP. Production Keycloak needs its own DB, TLS and a real hostname.
+    profiles: ["keycloak"]
+    image: quay.io/keycloak/keycloak:26.8.2
+    command: ["start-dev", "--http-port=8080", "--hostname=http://localhost:${KEYCLOAK_PORT:-8180}", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in .env}
+    volumes:
+      - ../keycloak/dpi-realm.json:/opt/keycloak/data/import/dpi-realm.json:ro
+      - keycloak:/opt/keycloak/data
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT:-8180}:8080"
+
   app:
     build: { context: ../.., dockerfile: deploy/docker/Dockerfile }
     depends_on:
@@ -36,7 +51,10 @@ services:
       DPI_DB_URL: jdbc:postgresql://postgres:5432/dpi
       DPI_DB_USER: dpi
       DPI_DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DPI_JWT_ISSUER_URI: ${DPI_JWT_ISSUER_URI:?set DPI_JWT_ISSUER_URI}
+      # `iss` as the browser/clients see it (Keycloak runs with --hostname=http://localhost:KEYCLOAK_PORT); JWKS is fetched over the compose network.
+      DPI_JWT_ISSUER_URI: ${DPI_JWT_ISSUER_URI:-http://localhost:8180/realms/dpi}
+      DPI_JWK_SET_URI: ${DPI_JWK_SET_URI-http://keycloak:8080/realms/dpi/protocol/openid-connect/certs}
+      DPI_JWT_AUDIENCE: ${DPI_JWT_AUDIENCE:-dpi-log-analysis}
       DPI_ES_URIS: ${DPI_ES_URIS:?set DPI_ES_URIS}
       DPI_ES_USER: ${DPI_ES_USER:-}
       DPI_ES_PASSWORD: ${DPI_ES_PASSWORD:-}
@@ -53,5 +71,6 @@ services:
     security_opt: ["no-new-privileges:true"]
 
 volumes:
+  keycloak:
   pgdata:
   ollama:

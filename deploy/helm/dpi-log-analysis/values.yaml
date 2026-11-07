@@ -14,7 +14,9 @@ existingSecret: ""
 config:
   dbUrl: ""                      # e.g. jdbc:postgresql://pg.example:5432/dpi   (REQUIRED)
   dbUser: dpi
-  jwtIssuerUri: ""               # REQUIRED; the service refuses to start without it
+  jwtIssuerUri: ""               # REQUIRED; exactly the access tokens' `iss` claim (Keycloak: https://<host>/realms/<realm>)
+  jwkSetUri: ""                  # optional; key endpoint reachable from the pod. Empty = derived from the issuer's discovery document
+  jwtAudience: "dpi-log-analysis" # tokens must carry this `aud` (Keycloak: audience mapper; empty disables the check)
   esUris: ""                     # REQUIRED; the existing Elasticsearch (read-only account)
   esUser: ""
   esIndexPattern: "logstash-*"

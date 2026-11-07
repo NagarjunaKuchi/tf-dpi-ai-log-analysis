@@ -1,0 +1,49 @@
+{
+  "realm": "dpi",
+  "enabled": true,
+  "displayName": "DPI log analysis",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "loginWithEmailAllowed": true,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+  "roles": {
+    "realm": [
+      { "name": "ANALYST", "description": "Submit analyses and read results" },
+      { "name": "REVIEWER", "description": "Decide on reports and validate knowledge documents" },
+      { "name": "KNOWLEDGE_ADMIN", "description": "Ingest runbooks and incident knowledge" },
+      { "name": "OPERATOR", "description": "Access to OpenAPI docs and actuator endpoints" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "dpi-log-analysis",
+      "name": "DPI log analysis API clients",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:*"],
+      "webOrigins": ["+"],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "protocolMappers": [
+        {
+          "name": "dpi-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "dpi-log-analysis",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

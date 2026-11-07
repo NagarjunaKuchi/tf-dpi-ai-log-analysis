@@ -30,9 +30,7 @@ class SecurityConfiguration {
     SecurityFilterChain api(HttpSecurity http, SecurityProperties props,
             @org.springframework.beans.factory.annotation.Value("${management.server.port:-1}") int managementPort,
             @org.springframework.beans.factory.annotation.Value("${server.port:8080}") int serverPort) throws Exception {
-        if (props.jwtIssuerUri() == null || props.jwtIssuerUri().isBlank()) {
-            throw new IllegalStateException("dpi.security.jwt-issuer-uri (DPI_JWT_ISSUER_URI) must be configured");
-        }
+        JwtConfiguration.requireIssuer(props);
         http.csrf(AbstractHttpConfigurer::disable) // stateless bearer-token API, no cookies
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
@@ -49,25 +47,43 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/v1/knowledge").hasRole("KNOWLEDGE_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/knowledge/*/versions/*/validate").hasRole("REVIEWER")
                         .anyRequest().denyAll())
-                .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter(props.rolesClaim()))))
+                .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter(props.rolesClaim(), props.audience()))))
                 .addFilterBefore(new CorrelationIdFilter(), BasicAuthenticationFilter.class)
                 .addFilterAfter(new RateLimitFilter(props.rateLimitPerMinute()), BasicAuthenticationFilter.class)
                 .headers(Customizer.withDefaults());
         return http.build();
     }
 
-    static JwtAuthenticationConverter converter(String claim) {
+    static JwtAuthenticationConverter converter(String claim, String clientId) {
         JwtAuthenticationConverter c = new JwtAuthenticationConverter();
-        c.setJwtGrantedAuthoritiesConverter(jwt -> authorities(jwt, claim));
+        c.setJwtGrantedAuthoritiesConverter(jwt -> authorities(jwt, claim, clientId));
         return c;
     }
 
-    static Collection<GrantedAuthority> authorities(Jwt jwt, String claim) {
-        List<String> roles = jwt.getClaimAsStringList(claim);
-        if (roles == null) {
-            return List.of();
+    private static final java.util.regex.Pattern ROLE = java.util.regex.Pattern.compile("[A-Z_]{2,40}");
+
+    /**
+     * Roles from the top-level claim plus Keycloak's {@code realm_access.roles} and {@code resource_access.<client>.roles}.
+     * Only upper-case identifiers are accepted, so unrelated Keycloak roles (offline_access, uma_authorization, ...) are ignored.
+     */
+    static Collection<GrantedAuthority> authorities(Jwt jwt, String claim, String clientId) {
+        java.util.Set<String> roles = new java.util.LinkedHashSet<>();
+        addAll(roles, jwt.getClaimAsStringList(claim));
+        addAll(roles, rolesIn(jwt.getClaimAsMap("realm_access")));
+        if (clientId != null && !clientId.isBlank() && jwt.getClaimAsMap("resource_access") != null
+                && jwt.getClaimAsMap("resource_access").get(clientId) instanceof java.util.Map<?, ?> m) {
+            addAll(roles, rolesIn(m));
         }
-        return roles.stream().filter(r -> r != null && r.matches("[A-Z_]{2,40}"))
-                .<GrantedAuthority>map(r -> new SimpleGrantedAuthority("ROLE_" + r)).toList();
+        return roles.stream().<GrantedAuthority>map(r -> new SimpleGrantedAuthority("ROLE_" + r)).toList();
+    }
+
+    private static List<String> rolesIn(java.util.Map<?, ?> m) {
+        return m != null && m.get("roles") instanceof List<?> l ? l.stream().map(String::valueOf).toList() : List.of();
+    }
+
+    private static void addAll(java.util.Set<String> out, List<String> in) {
+        if (in != null) {
+            in.stream().filter(r -> r != null && ROLE.matcher(r).matches()).forEach(out::add);
+        }
     }
 }

@@ -24,7 +24,7 @@ Spring AI 2.0.2, Java 21, LangGraph4j 1.9.8, Elasticsearch client 8.19.24.
 | Vector retrieval service (Spring AI `VectorStore`, filters) | Implemented; integration-tested | `VectorStoreDocumentRetriever` + metadata filters pinned to embedding model/version. Service/level/time-overlap/embedding-model filters and similarity threshold verified against real pgvector with a fake embedding model (real model quality untested) |
 | LangGraph4j agent, nodes, tools (Modules 8-9) | Implemented, 6 graph tests with a fake LLM | 9 nodes, bounded loops, timeout, explicit failure outcome. Run state is in-memory (`MemorySaver`) so runs are NOT resumable after a restart; the content-free step trail is persisted to `agent_checkpoint` and stale runs are failed as INTERRUPTED. Durable resumable checkpoints are NOT implemented. `SpringAiAgentLlm` never run against a real model |
 | Evidence verification (Module 10), report generation (Module 11) | Implemented, tested via graph tests | Deterministic verifier; report is data only, REST exposure in Phase 5. Review decision endpoint is in the REST row |
-| REST API, security, rate limiting, OpenAPI | Implemented; components unit-tested (14 tests) | Async analyses, report fetch, human review gate, knowledge ingest/validate, JWT+RBAC, per-instance rate limit, correlation ids, problem+json. Security filter chain and controllers never exercised in a running context |
+| REST API, security, rate limiting, OpenAPI | Implemented; unit-tested and smoke-tested with real Keycloak tokens | Async analyses, report fetch, human review gate, knowledge ingest/validate, Keycloak/OIDC JWT + RBAC (RS256, issuer, audience), per-instance rate limit, correlation ids, problem+json. Real-token smoke test (`deploy/keycloak/smoke-test.sh`) passed locally against Keycloak 26.8.2 with a single app instance; production IdP setup untested |
 | LLM/retrieval/analysis/evidence metrics, JSON logging | Implemented | Metric names confirmed from a live scrape of the jar; distributed tracing NOT implemented |
 | CI pipeline (GitHub Actions), local Terraform IaC | Written; workflow actionlint-clean, test commands run locally; Terraform fmt+validate OK | Never ran on GitHub; image build/push, Trivy scan and `terraform apply` never executed. See `docs/CI-CD.md` |
 | Dockerfile, Compose, Kubernetes (Helm), Grafana | Written; chart linted, rendered (4 configs) and kubeconform-validated; jar boot-tested | Dockerfile and Compose never built/run (no Docker daemon); chart never installed in a cluster; dashboard JSON never imported into Grafana |
@@ -34,7 +34,7 @@ Spring AI 2.0.2, Java 21, LangGraph4j 1.9.8, Elasticsearch client 8.19.24.
 
 1. Real Elasticsearch 8.19.24 with the actual Logstash field mapping (flat field names and the `_id` sort tiebreaker are assumptions).
 2. A real Ollama / vLLM chat model (structured-output reliability) and the real BGE-M3 embedding model (retrieval quality, 1024 dimensions).
-3. A real JWT issuer and claim layout; the Docker image, Compose stack, Helm install, NetworkPolicy enforcement and Grafana import.
+3. A production identity provider setup (Keycloak token validation is tested locally against Keycloak 26.8.2, see docs/OPERATIONS.md); the Docker image, Compose stack, Helm install, NetworkPolicy enforcement and Grafana import.
 4. Production PostgreSQL / pgvector versions, load and capacity behaviour (no performance test exists), a dependency CVE scan.
 5. Masking rules against real MOSIP/DPI log samples; durable resumable agent checkpoints and distributed tracing are not implemented.
 

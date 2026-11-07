@@ -42,6 +42,8 @@ spec:
             - name: DPI_DB_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.existingSecret }}, key: DPI_DB_PASSWORD } }
             - { name: DPI_JWT_ISSUER_URI, value: {{ .Values.config.jwtIssuerUri | quote }} }
+            - { name: DPI_JWK_SET_URI, value: {{ .Values.config.jwkSetUri | quote }} }
+            - { name: DPI_JWT_AUDIENCE, value: {{ .Values.config.jwtAudience | quote }} }
             - { name: DPI_ES_URIS, value: {{ .Values.config.esUris | quote }} }
             - { name: DPI_ES_USER, value: {{ .Values.config.esUser | quote }} }
             - { name: DPI_ES_INDEX_PATTERN, value: {{ .Values.config.esIndexPattern | quote }} }

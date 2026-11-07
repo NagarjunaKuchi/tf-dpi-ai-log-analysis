@@ -27,13 +27,14 @@ Known limitation: `latest` is moved on every main build; deploy by SHA or versio
 
 ## Local machine IaC (`deploy/terraform/local`)
 Terraform + the Docker provider create: a network, PostgreSQL+pgvector (generated password, health-checked), Ollama (optional GPU, optional model pull) and the app container
-(hardened: read-only FS, no capabilities, no-new-privileges; API bound to 127.0.0.1, management port loopback-only). Elasticsearch and the JWT issuer stay **external** and must be supplied.
+(hardened: read-only FS, no capabilities, no-new-privileges; API bound to 127.0.0.1, management port loopback-only). Elasticsearch stays **external** and must be supplied. A dev-mode Keycloak (realm `dpi`) is started by default (`deploy_keycloak = true`); set `deploy_keycloak = false` and `jwt_issuer_uri` to use your own OIDC provider.
 
 ```bash
 cd deploy/terraform/local
-cp terraform.tfvars.example terraform.tfvars      # set jwt_issuer_uri, es_uris, ...
+cp terraform.tfvars.example terraform.tfvars      # set es_uris (and jwt_issuer_uri if deploy_keycloak=false)
 terraform init && terraform apply                 # builds the image locally by default
 terraform output health_url                       # then: curl <health_url>
+terraform output -raw keycloak_admin_password     # admin console: http://localhost:8180 (create users, assign roles)
 terraform destroy                                 # volumes with data are removed too
 ```
 To run the CI-published image instead of building: `-var build_local_image=false -var app_image=<user>/dpi-log-analysis:<tag>`.

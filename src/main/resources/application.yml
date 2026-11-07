@@ -4,11 +4,6 @@
 spring:
   application:
     name: dpi-agentic-rag-log-analysis
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${DPI_JWT_ISSUER_URI}
   datasource:
     url: ${DPI_DB_URL}
     username: ${DPI_DB_USER}
@@ -123,4 +118,6 @@ dpi:
     timeout: 120s
   security:
     jwt-issuer-uri: ${DPI_JWT_ISSUER_URI:}
+    jwk-set-uri: ${DPI_JWK_SET_URI:}      # only when the IdP is reached under a different address than its `iss`
+    audience: ${DPI_JWT_AUDIENCE:dpi-log-analysis}
     rate-limit-per-minute: 60

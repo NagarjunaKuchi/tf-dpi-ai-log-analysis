@@ -20,13 +20,13 @@ class SecurityComponentsTest {
 
     @Test
     void rolesAreMappedAndMalformedRolesDropped() {
-        var auth = SecurityConfiguration.authorities(jwt(Map.of("roles", List.of("REVIEWER", "bad role!", "ANALYST"))), "roles");
+        var auth = SecurityConfiguration.authorities(jwt(Map.of("roles", List.of("REVIEWER", "bad role!", "ANALYST"))), "roles", "dpi-log-analysis");
         assertThat(auth).extracting(Object::toString).containsExactlyInAnyOrder("ROLE_REVIEWER", "ROLE_ANALYST");
     }
 
     @Test
     void missingRolesClaimGrantsNothing() {
-        assertThat(SecurityConfiguration.authorities(jwt(Map.of("sub", "x")), "roles")).isEmpty();
+        assertThat(SecurityConfiguration.authorities(jwt(Map.of("sub", "x")), "roles", "dpi-log-analysis")).isEmpty();
     }
 
     @Test
