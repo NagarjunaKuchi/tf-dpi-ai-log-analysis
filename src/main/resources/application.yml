@@ -84,6 +84,13 @@ dpi:
     page-size: 500
     max-retries: 3
     initial-backoff: 500ms
+    # Per-application mapping (see docs/ONBOARDING-APPLICATION.md). Defaults suit a flat Logstash layout:
+    # fields: { service: kubernetes.container.name, level: log.level, stack-trace: error.stack_trace }
+    # mapping:
+    #   timestamp-formats: [iso, "dd/MMM/yyyy:HH:mm:ss Z"]   # iso | epoch_millis | epoch_seconds | DateTimeFormatter pattern
+    #   timestamp-zone: UTC                                  # for patterns without an offset
+    #   level-aliases: { E: ERROR, W: WARN }
+    #   exception-pattern: ""                                # regex, exception type in group 1
   masking:
     max-input-chars: 2000000
     max-duration: 2s

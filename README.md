@@ -65,3 +65,5 @@ Not implemented: distributed tracing (no tracing bridge/exporter configured) and
 2. Spring AI's default model-call retry (10 attempts, 5x backoff) let one analysis run for minutes with the LLM down: capped at 2 attempts, max 5 s backoff.
 3. A JVM timezone id unknown to PostgreSQL (e.g. `Asia/Calcutta`) makes the JDBC connection fail: run the service with `-Duser.timezone=UTC` (tests do this via the pom).
 4. LangGraph4j node threads do not inherit the logging MDC: node log lines now include the analysis id explicitly.
+
+Onboarding another application (field names, timestamp/level/exception interpretation, custom `LogEventMapper`): [docs/ONBOARDING-APPLICATION.md](docs/ONBOARDING-APPLICATION.md). One deployment serves one application.

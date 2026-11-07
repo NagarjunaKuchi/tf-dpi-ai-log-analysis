@@ -3,27 +3,86 @@ package tf.dpi.ai.elasticsearch;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import tf.dpi.ai.exception.CorruptLogRecordException;
 import tf.dpi.ai.model.LogEvent;
 import tf.dpi.ai.model.LogLevel;
 
 /**
- * Maps an Elasticsearch document to a {@link LogEvent}. Only the fields the platform needs are carried over
- * (data minimisation). Failures raise {@link CorruptLogRecordException} with a content-free reason.
+ * Default, configuration-driven {@link LogEventMapper}: field names ({@code dpi.elasticsearch.fields}) and value
+ * interpretation ({@code dpi.elasticsearch.mapping}) come from configuration. Only the fields the platform needs are carried
+ * over (data minimisation). Failures raise {@link CorruptLogRecordException} with a content-free reason.
  */
-public class ElasticsearchLogMapper {
+public class ElasticsearchLogMapper implements LogEventMapper {
 
-    private static final Pattern EXCEPTION_HEAD =
+    private static final Pattern DEFAULT_EXCEPTION_HEAD =
             Pattern.compile("^\\s*([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)+(?:Exception|Error|Throwable))\\b");
+    /** The exception pattern only looks at the start of the trace, which bounds the cost of an operator-supplied regex. */
+    private static final int EXCEPTION_SCAN_CHARS = 1000;
 
     private final ElasticsearchProperties.Fields fields;
+    private final Pattern exceptionHead;
+    private final List<TimestampFormat> timestampFormats;
+    private final Map<String, LogLevel> levelAliases;
+    private final boolean numericAsSeconds;
 
     public ElasticsearchLogMapper(ElasticsearchProperties.Fields fields) {
-        this.fields = fields;
+        this(fields, ElasticsearchProperties.Mapping.defaults());
     }
 
+    public ElasticsearchLogMapper(ElasticsearchProperties.Fields fields, ElasticsearchProperties.Mapping mapping) {
+        this.fields = fields;
+        this.exceptionHead = compileExceptionPattern(mapping.exceptionPattern());
+        ZoneId zone;
+        try {
+            zone = ZoneId.of(mapping.timestampZone());
+        } catch (DateTimeException e) {
+            throw new IllegalArgumentException("dpi.elasticsearch.mapping.timestamp-zone is not a valid zone id");
+        }
+        List<TimestampFormat> formats = new ArrayList<>();
+        for (String f : mapping.timestampFormats()) {
+            formats.add(TimestampFormat.of(f, zone));
+        }
+        this.timestampFormats = List.copyOf(formats);
+        this.numericAsSeconds = mapping.timestampFormats().contains("epoch_seconds")
+                && !mapping.timestampFormats().contains("epoch_millis");
+        Map<String, LogLevel> aliases = new java.util.HashMap<>();
+        mapping.levelAliases().forEach((k, v) -> {
+            try {
+                aliases.put(k.trim().toUpperCase(Locale.ROOT), LogLevel.valueOf(v.trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(
+                        "dpi.elasticsearch.mapping.level-aliases: value for '" + k + "' is not a log level (TRACE..FATAL)");
+            }
+        });
+        this.levelAliases = Map.copyOf(aliases);
+    }
+
+    private static Pattern compileExceptionPattern(String configured) {
+        if (configured == null || configured.isBlank()) {
+            return DEFAULT_EXCEPTION_HEAD;
+        }
+        try {
+            Pattern p = Pattern.compile(configured);
+            if (p.matcher("").groupCount() < 1) {
+                throw new IllegalArgumentException(
+                        "dpi.elasticsearch.mapping.exception-pattern must contain a capturing group for the exception type");
+            }
+            return p;
+        } catch (PatternSyntaxException e) {
+            throw new IllegalArgumentException("dpi.elasticsearch.mapping.exception-pattern is not a valid regular expression");
+        }
+    }
+
+    @Override
     public LogEvent map(String documentId, String index, JsonNode source) {
         if (documentId == null || documentId.isBlank()) {
             throw new CorruptLogRecordException("<missing>", "document has no id");
@@ -35,8 +94,9 @@ public class ElasticsearchLogMapper {
         String stackTrace = text(resolve(source, fields.stackTrace()));
         String exceptionType = text(resolve(source, fields.exceptionType()));
         if (exceptionType.isBlank()) {
-            Matcher m = EXCEPTION_HEAD.matcher(stackTrace);
-            if (m.find()) {
+            Matcher m = exceptionHead.matcher(stackTrace.length() > EXCEPTION_SCAN_CHARS
+                    ? stackTrace.substring(0, EXCEPTION_SCAN_CHARS) : stackTrace);
+            if (m.find() && m.group(1) != null) {
                 exceptionType = m.group(1);
             }
         }
@@ -46,7 +106,7 @@ public class ElasticsearchLogMapper {
                 timestamp,
                 text(resolve(source, fields.service())),
                 text(resolve(source, fields.host())),
-                LogLevel.parse(text(resolve(source, fields.level()))),
+                parseLevel(text(resolve(source, fields.level()))),
                 text(resolve(source, fields.traceId())),
                 text(resolve(source, fields.errorCode())),
                 exceptionType,
@@ -55,17 +115,81 @@ public class ElasticsearchLogMapper {
                 java.util.Map.of());
     }
 
-    private static Instant parseTimestamp(String documentId, JsonNode node) {
+    private LogLevel parseLevel(String raw) {
+        LogLevel aliased = levelAliases.get(raw.trim().toUpperCase(Locale.ROOT));
+        return aliased != null ? aliased : LogLevel.parse(raw);
+    }
+
+    private Instant parseTimestamp(String documentId, JsonNode node) {
         if (node == null || node.isNull() || node.isMissingNode()) {
             throw new CorruptLogRecordException(documentId, "timestamp missing");
         }
-        try {
-            if (node.isNumber()) {
-                return Instant.ofEpochMilli(node.asLong());
+        if (node.isNumber()) {
+            try {
+                return numericAsSeconds ? Instant.ofEpochSecond(node.asLong()) : Instant.ofEpochMilli(node.asLong());
+            } catch (DateTimeException e) {
+                throw new CorruptLogRecordException(documentId, "timestamp unparseable");
             }
-            return Instant.parse(node.asText().trim());
-        } catch (DateTimeException e) {
-            throw new CorruptLogRecordException(documentId, "timestamp unparseable");
+        }
+        String text = node.asText().trim();
+        for (TimestampFormat f : timestampFormats) {
+            Instant parsed = f.parse(text);
+            if (parsed != null) {
+                return parsed;
+            }
+        }
+        throw new CorruptLogRecordException(documentId, "timestamp unparseable");
+    }
+
+    /** One configured way to read a textual timestamp; returns null (never throws) when the text does not match. */
+    private interface TimestampFormat {
+        Instant parse(String text);
+
+        static TimestampFormat of(String spec, ZoneId zone) {
+            return switch (spec.trim()) {
+                case "iso" -> text -> {
+                    try {
+                        return Instant.parse(text);
+                    } catch (DateTimeException e) {
+                        try {
+                            return java.time.OffsetDateTime.parse(text).toInstant();
+                        } catch (DateTimeException e2) {
+                            return null;
+                        }
+                    }
+                };
+                case "epoch_millis" -> text -> digits(text) ? safeEpoch(text, false) : null;
+                case "epoch_seconds" -> text -> digits(text) ? safeEpoch(text, true) : null;
+                default -> {
+                    DateTimeFormatter f;
+                    try {
+                        f = DateTimeFormatter.ofPattern(spec, Locale.ENGLISH).withZone(zone);
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalArgumentException(
+                                "dpi.elasticsearch.mapping.timestamp-formats contains an invalid pattern: " + spec);
+                    }
+                    yield text -> {
+                        try {
+                            return Instant.from(f.parse(text));
+                        } catch (DateTimeException e) {
+                            return null;
+                        }
+                    };
+                }
+            };
+        }
+
+        private static boolean digits(String t) {
+            return !t.isEmpty() && t.length() <= 19 && t.chars().allMatch(Character::isDigit);
+        }
+
+        private static Instant safeEpoch(String t, boolean seconds) {
+            try {
+                long v = Long.parseLong(t);
+                return seconds ? Instant.ofEpochSecond(v) : Instant.ofEpochMilli(v);
+            } catch (RuntimeException e) {
+                return null;
+            }
         }
     }
 

@@ -27,7 +27,8 @@ public record ElasticsearchProperties(
         @DefaultValue("30s") Duration contextBefore,
         @DefaultValue("30s") Duration contextAfter,
         @DefaultValue("50") int maxContextEvents,
-        @DefaultValue Fields fields) {
+        @DefaultValue Fields fields,
+        @DefaultValue Mapping mapping) {
 
     public ElasticsearchProperties {
         if (uris == null || uris.isEmpty()) {
@@ -39,6 +40,37 @@ public record ElasticsearchProperties(
         }
         if (maxRetries < 0 || maxRetries > 10) {
             throw new IllegalArgumentException("dpi.elasticsearch.max-retries must be within 0..10");
+        }
+    }
+
+    /**
+     * How raw values are interpreted. All values are validated at startup; invalid configuration stops the service.
+     *
+     * @param timestampFormats tried in order. {@code iso} (ISO-8601 instant/offset), {@code epoch_millis}, {@code epoch_seconds},
+     *                         or a {@link java.time.format.DateTimeFormatter} pattern (e.g. {@code dd/MMM/yyyy:HH:mm:ss Z}).
+     *                         Numeric values are read as epoch millis unless only {@code epoch_seconds} is listed.
+     * @param timestampZone    zone applied to pattern formats that carry no offset
+     * @param levelAliases     extra level spellings, upper-cased source value to LogLevel name (e.g. {@code E: ERROR, "3": ERROR})
+     * @param exceptionPattern regex with the exception type in group 1, applied to the first line of the stack trace when the
+     *                         exception-type field is empty; empty = the built-in Java pattern. Operator-supplied: avoid nested quantifiers.
+     */
+    public record Mapping(
+            @DefaultValue({"iso", "epoch_millis"}) List<String> timestampFormats,
+            @DefaultValue("UTC") String timestampZone,
+            @DefaultValue java.util.Map<String, String> levelAliases,
+            @DefaultValue("") String exceptionPattern) {
+
+        public Mapping {
+            if (timestampFormats == null || timestampFormats.isEmpty()) {
+                throw new IllegalArgumentException("dpi.elasticsearch.mapping.timestamp-formats must not be empty");
+            }
+            timestampFormats = List.copyOf(timestampFormats);
+            levelAliases = levelAliases == null ? java.util.Map.of() : java.util.Map.copyOf(levelAliases);
+            exceptionPattern = exceptionPattern == null ? "" : exceptionPattern;
+        }
+
+        public static Mapping defaults() {
+            return new Mapping(List.of("iso", "epoch_millis"), "UTC", java.util.Map.of(), "");
         }
     }
 

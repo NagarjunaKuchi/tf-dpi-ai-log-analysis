@@ -57,3 +57,6 @@ is recorded here. None of these changes the approved architecture.
 41. Access tokens are validated offline (signature + claims); there is no revocation check or introspection. A disabled user keeps access until the token expires (15 min in the dev realm). Short token lifetimes are the mitigation.
 42. Roles are read from `roles`, `realm_access.roles` and `resource_access.<audience>.roles` and must match `[A-Z_]{2,40}`; a role mapped in any other claim is ignored.
 43. The dev Keycloak (`start-dev`, H2, HTTP) is for development only; the Compose/Terraform/Helm wiring for it has been statically validated but not run (no Docker daemon in the authoring environment).
+44. One deployment serves one application (decided with the owner). Multi-application tenancy in a single instance (source ids, per-source state and isolation) is not implemented.
+45. Mapping is configuration first (`fields`, `mapping`), with a `LogEventMapper` bean as the escape hatch. Tested with synthetic documents only, never with another application's real logs. An unrecognised log level maps to INFO and is dropped by the default WARN filter without a report.
+46. `mapping.exception-pattern` is an operator-supplied regular expression; it is limited to the first 1000 characters of a trace, but a pathological pattern could still be slow. Treat it as trusted configuration.

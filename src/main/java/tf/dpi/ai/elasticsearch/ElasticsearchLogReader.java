@@ -30,18 +30,18 @@ public class ElasticsearchLogReader implements LogSource {
 
     private final ElasticsearchClient client;
     private final ElasticsearchQueryBuilder queries;
-    private final ElasticsearchLogMapper mapper;
+    private final LogEventMapper mapper;
     private final ElasticsearchProperties props;
     private final Timer queryTimer;
     private final Sleeper sleeper;
 
     public ElasticsearchLogReader(ElasticsearchClient client, ElasticsearchQueryBuilder queries,
-            ElasticsearchLogMapper mapper, ElasticsearchProperties props, MeterRegistry meters) {
+            LogEventMapper mapper, ElasticsearchProperties props, MeterRegistry meters) {
         this(client, queries, mapper, props, meters, Thread::sleep);
     }
 
     ElasticsearchLogReader(ElasticsearchClient client, ElasticsearchQueryBuilder queries,
-            ElasticsearchLogMapper mapper, ElasticsearchProperties props, MeterRegistry meters, Sleeper sleeper) {
+            LogEventMapper mapper, ElasticsearchProperties props, MeterRegistry meters, Sleeper sleeper) {
         this.client = client;
         this.queries = queries;
         this.mapper = mapper;
