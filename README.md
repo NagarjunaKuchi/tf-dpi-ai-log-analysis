@@ -1,4 +1,4 @@
-# DPI Agentic RAG Log Analysis (`tf.dpi.ai`)
+# DPI Agentic RAG Log Analysis
 
 Agentic RAG incident analysis on top of the existing Logstash → Elasticsearch → Kibana pipeline.
 Architecture source of truth: *AI-POC-DPITeam_Enhanced.pptx* (Spring Boot + Spring AI, PostgreSQL + pgvector,
