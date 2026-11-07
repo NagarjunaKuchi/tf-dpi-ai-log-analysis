@@ -19,8 +19,10 @@ public class SpringAiAgentLlm implements AgentLlm {
             [MASKED:...] placeholders; never try to reconstruct them. Use only the evidence provided.""";
 
     private final ChatClient chat;
+    private final String knownCategories;
 
-    public SpringAiAgentLlm(ChatClient.Builder builder) {
+    public SpringAiAgentLlm(ChatClient.Builder builder, java.util.List<String> knownSignatureNames) {
+        this.knownCategories = String.join(", ", knownSignatureNames);
         this.chat = builder.defaultSystem(RULES).build();
     }
 
@@ -47,7 +49,7 @@ public class SpringAiAgentLlm implements AgentLlm {
 
     @Override
     public RcaResult analyzeRootCause(String question, List<Evidence> current, List<Evidence> knowledge,
-            List<Scenario> scenarios, List<String> priorRejections) {
+            List<String> signatures, List<String> priorRejections) {
         return chat.prompt()
                 .user(u -> u.text("""
                         Question: {q}
@@ -59,17 +61,21 @@ public class SpringAiAgentLlm implements AgentLlm {
                         a current fault):
                         {kb}
 
-                        Signature scenarios detected deterministically: {sc}
+                        Failure signatures detected deterministically in the current evidence: {sc}
                         Findings rejected earlier by the verifier (do not repeat them): {rej}
 
                         Produce findings. Each finding MUST list evidenceIds copied exactly from the evidence ids above
                         and quotedTerms: short exact substrings copied from that evidence which support the claim.
-                        category is one of DB_CONNECTION_REFUSED, OUT_OF_MEMORY, ACTIVEMQ_ISSUE, OTHER. Confidence is
-                        LOW, MEDIUM or HIGH. If the evidence does not support a cause, return no findings and list
+                        category is a short UPPER_SNAKE_CASE label for the class of fault the evidence shows. If one of
+                        these known labels fits, use it exactly: {known}. Otherwise choose your own precise label
+                        (for example INVALID_INPUT or CONFIG_MISSING); use OTHER only when nothing more specific applies.
+                        A known label is accepted only when its signature appears in the evidence you cite. Any error
+                        can be analysed, not only the known ones. Confidence is LOW, MEDIUM or HIGH. If the evidence does not support a cause, return no findings and list
                         openQuestions. recommendedChecks are manual checks for an engineer; never commands to run
                         automatically.""")
                         .param("q", question).param("cur", render(current)).param("kb", render(knowledge))
-                        .param("sc", scenarios.isEmpty() ? "none" : scenarios.toString())
+                        .param("sc", signatures.isEmpty() ? "none" : signatures.toString())
+                        .param("known", knownCategories)
                         .param("rej", priorRejections.isEmpty() ? "none" : String.join("; ", priorRejections)))
                 .call().entity(RcaResult.class);
     }

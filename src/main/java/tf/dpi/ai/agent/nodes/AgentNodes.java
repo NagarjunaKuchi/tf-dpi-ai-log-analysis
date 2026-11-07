@@ -18,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tf.dpi.ai.agent.AgentLlm;
 import tf.dpi.ai.agent.AgentProperties;
-import tf.dpi.ai.agent.Scenario;
 import tf.dpi.ai.agent.dto.Finding;
 import tf.dpi.ai.agent.dto.QueryAnalysis;
 import tf.dpi.ai.agent.dto.RcaResult;
@@ -127,8 +126,8 @@ public class AgentNodes {
         return guarded("rootCause", s, () -> {
             List<Evidence> current = s.relevant().stream().filter(Evidence::isCurrent).toList();
             String currentText = current.stream().map(Evidence::excerpt).collect(Collectors.joining("\n"));
-            List<Scenario> scenarios = Scenario.detect(currentText);
-            RcaResult r = llm.analyzeRootCause(s.question(), current, s.knowledge(), scenarios, s.rejections());
+            List<String> signatures = verifier.signatures().detect(currentText);
+            RcaResult r = llm.analyzeRootCause(s.question(), current, s.knowledge(), signatures, s.rejections());
             return Map.of(RCA, r == null ? new RcaResult("", List.of(), List.of(), List.of()) : r,
                     VERIFICATION_ATTEMPTS, s.verificationAttempts() + 1,
                     TRAIL, "root cause analysis produced " + (r == null ? 0 : r.findings().size()) + " finding(s)");

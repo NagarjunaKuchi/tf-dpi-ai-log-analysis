@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import tf.dpi.ai.agent.Scenario;
+import tf.dpi.ai.agent.FailureSignatures;
 import tf.dpi.ai.agent.dto.Confidence;
 import tf.dpi.ai.agent.dto.Finding;
 import tf.dpi.ai.agent.dto.VerificationResult;
@@ -17,10 +17,26 @@ import tf.dpi.ai.agent.dto.VerificationResult.RejectedFinding;
  * Deterministic gate between the LLM's claims and the report. No model is consulted. A finding survives only if:
  * it cites evidence that was actually retrieved in this run; at least one cited item is a CURRENT observation
  * (runbooks and past incidents cannot prove a present fault); it carries at least one quoted term and every quoted term
- * appears verbatim in the cited evidence; and, when it claims a known scenario, that scenario's signature appears in the
- * cited current evidence. HIGH confidence additionally needs two distinct current items, otherwise it is downgraded.
+ * appears verbatim in the cited evidence; and, when its category is the name of a configured failure signature, that
+ * signature appears in the cited current evidence. Any other category is accepted on the generic rules alone, so the
+ * verifier does not limit which errors can be analysed. HIGH confidence additionally needs two distinct current items,
+ * otherwise it is downgraded. The category is normalised (UPPER_SNAKE_CASE, bounded) because model output is untrusted.
  */
 public final class EvidenceVerifier {
+
+    private final FailureSignatures signatures;
+
+    public EvidenceVerifier() {
+        this(FailureSignatures.builtIn());
+    }
+
+    public EvidenceVerifier(FailureSignatures signatures) {
+        this.signatures = signatures;
+    }
+
+    public FailureSignatures signatures() {
+        return signatures;
+    }
 
     public VerificationResult verify(List<Finding> findings, List<Evidence> pool) {
         Map<String, Evidence> byId = pool.stream()
@@ -33,7 +49,7 @@ public final class EvidenceVerifier {
                 rejected.add(new RejectedFinding(f, reason));
                 continue;
             }
-            verified.add(capConfidence(f, byId));
+            verified.add(capConfidence(normalised(f), byId));
         }
         return new VerificationResult(verified, rejected);
     }
@@ -67,14 +83,19 @@ public final class EvidenceVerifier {
                 return "quoted term not found in cited evidence";
             }
         }
-        Scenario scenario = Scenario.fromCategory(f.category());
-        if (scenario != null) {
+        String category = FailureSignatures.normalizeCategory(f.category());
+        if (signatures.isKnown(category)) {
             String currentText = current.stream().map(Evidence::excerpt).collect(Collectors.joining("\n"));
-            if (!scenario.matches(currentText)) {
-                return "scenario " + scenario + " signature absent from cited current evidence";
+            if (!signatures.matches(category, currentText)) {
+                return "category " + category + " signature absent from cited current evidence";
             }
         }
         return null;
+    }
+
+    private static Finding normalised(Finding f) {
+        return new Finding(f.statement(), FailureSignatures.normalizeCategory(f.category()), f.evidenceIds(), f.quotedTerms(),
+                f.confidence());
     }
 
     private Finding capConfidence(Finding f, Map<String, Evidence> byId) {

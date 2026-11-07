@@ -5,7 +5,6 @@ import io.micrometer.core.instrument.Timer;
 import java.util.List;
 import java.util.function.Supplier;
 import tf.dpi.ai.agent.AgentLlm;
-import tf.dpi.ai.agent.Scenario;
 import tf.dpi.ai.agent.dto.QueryAnalysis;
 import tf.dpi.ai.agent.dto.RcaResult;
 import tf.dpi.ai.evidence.Evidence;
@@ -33,8 +32,8 @@ public class MeteredAgentLlm implements AgentLlm {
 
     @Override
     public RcaResult analyzeRootCause(String question, List<Evidence> current, List<Evidence> knowledge,
-            List<Scenario> detectedScenarios, List<String> priorRejections) {
-        return timed("rootCause", () -> delegate.analyzeRootCause(question, current, knowledge, detectedScenarios,
+            List<String> detectedSignatures, List<String> priorRejections) {
+        return timed("rootCause", () -> delegate.analyzeRootCause(question, current, knowledge, detectedSignatures,
                 priorRejections));
     }
 

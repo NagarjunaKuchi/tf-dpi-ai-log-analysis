@@ -6,7 +6,7 @@ LangGraph4j, self-hosted Ollama/vLLM, engineer validation as the final gate).
 
 ## Status: all phases implemented — NOT production ready (see "Not verified" below)
 
-`mvn test`: 110 tests pass against a real PostgreSQL 16 + pgvector 0.6.0 (12 skip when no database is configured). Stack: Spring Boot 4.0.9,
+`mvn verify`: 158 tests pass against a real PostgreSQL 16 + pgvector 0.6.0 (the database-dependent ones are skipped when none is configured). Plain `mvn test` runs only the `*Test` classes; the `*IT` classes (full context, end-to-end) run in `mvn verify`. Stack: Spring Boot 4.0.9,
 Spring AI 2.0.2, Java 21, LangGraph4j 1.9.8, Elasticsearch client 8.19.24.
 
 | Component | State | Verification |
@@ -44,7 +44,7 @@ See `docs/CI-CD.md`, `docs/OPERATIONS.md`, `docs/SECURITY-ASSESSMENT.md`, `docs/
 
 ## Running the tests
 
-- `mvn test` runs unit tests; database tests are skipped without Docker or a database.
+- `mvn test` runs the unit tests; `mvn verify` also runs the `*IT` classes. Database tests are skipped without Docker or a database.
 - Set `DPI_TEST_JDBC_URL` (plus `DPI_TEST_JDBC_USER`, `DPI_TEST_JDBC_PASSWORD`) to run all integration tests, including the full
   Spring context test, against a disposable PostgreSQL with the pgvector extension. **The `public` schema is dropped and
   re-migrated on every run.** Without that variable the tests use a Testcontainers pgvector container when Docker is available.

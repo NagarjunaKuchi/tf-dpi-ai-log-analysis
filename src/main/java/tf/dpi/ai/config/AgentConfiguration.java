@@ -22,12 +22,18 @@ import tf.dpi.ai.vectorstore.KnowledgeRetrievalService;
 import tf.dpi.ai.vectorstore.LogChunkRetrievalService;
 
 @Configuration
-@EnableConfigurationProperties(AgentProperties.class)
+@EnableConfigurationProperties({AgentProperties.class, tf.dpi.ai.agent.SignatureProperties.class})
 class AgentConfiguration {
 
     @Bean
-    AgentLlm agentLlm(ChatClient.Builder builder, io.micrometer.core.instrument.MeterRegistry meters) {
-        return new tf.dpi.ai.observability.MeteredAgentLlm(new SpringAiAgentLlm(builder), meters);
+    tf.dpi.ai.agent.FailureSignatures failureSignatures(tf.dpi.ai.agent.SignatureProperties props) {
+        return props.toSignatures();
+    }
+
+    @Bean
+    AgentLlm agentLlm(ChatClient.Builder builder, io.micrometer.core.instrument.MeterRegistry meters,
+            tf.dpi.ai.agent.FailureSignatures signatures) {
+        return new tf.dpi.ai.observability.MeteredAgentLlm(new SpringAiAgentLlm(builder, signatures.names()), meters);
     }
 
     @Bean
@@ -37,8 +43,8 @@ class AgentConfiguration {
     }
 
     @Bean
-    EvidenceVerifier evidenceVerifier() {
-        return new EvidenceVerifier();
+    EvidenceVerifier evidenceVerifier(tf.dpi.ai.agent.FailureSignatures signatures) {
+        return new EvidenceVerifier(signatures);
     }
 
     @Bean

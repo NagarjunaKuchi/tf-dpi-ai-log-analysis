@@ -14,5 +14,5 @@ public interface AgentLlm {
     String rewrite(String question, String previousQuery, int attempt);
 
     RcaResult analyzeRootCause(String question, List<Evidence> current, List<Evidence> knowledge,
-            List<Scenario> detectedScenarios, List<String> priorRejections);
+            List<String> detectedSignatures, List<String> priorRejections);
 }

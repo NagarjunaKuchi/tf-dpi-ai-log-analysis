@@ -122,6 +122,8 @@ dpi:
     retention: 30d
     shutdown-grace: 60s
   agent:
+    # Failure signatures are hints/guards, not a list of supported errors (see docs/ONBOARDING-APPLICATION.md):
+    # signatures: { builtin: true, custom: [ { name: QUOTA_EXCEEDED, pattern: "(?i)quota exceeded" } ] }
     max-retrieval-retries: 2
     max-verification-retries: 2
     timeout: 120s

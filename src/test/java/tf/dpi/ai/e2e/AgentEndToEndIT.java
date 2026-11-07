@@ -25,7 +25,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import tf.dpi.ai.agent.AgentLlm;
 import tf.dpi.ai.agent.AgentProperties;
-import tf.dpi.ai.agent.Scenario;
 import tf.dpi.ai.agent.dto.Confidence;
 import tf.dpi.ai.agent.dto.Finding;
 import tf.dpi.ai.agent.dto.QueryAnalysis;
@@ -131,7 +130,7 @@ class AgentEndToEndIT {
         }
 
         @Override
-        public RcaResult analyzeRootCause(String q, List<Evidence> current, List<Evidence> kb, List<Scenario> sc, List<String> rej) {
+        public RcaResult analyzeRootCause(String q, List<Evidence> current, List<Evidence> kb, List<String> sc, List<String> rej) {
             if (current.isEmpty()) {
                 return new RcaResult("", List.of(), List.of(), List.of("no evidence"));
             }
@@ -140,14 +139,15 @@ class AgentEndToEndIT {
                 return new RcaResult("Heap exhausted", List.of(new Finding("JVM ran out of heap memory",
                         "OUT_OF_MEMORY", List.of(e.id()), List.of("OutOfMemoryError"), Confidence.HIGH)), List.of(), List.of());
             }
-            Scenario s = sc.get(0);
+            String s = sc.stream().filter(n -> n.equals("DB_CONNECTION_REFUSED") || n.equals("OUT_OF_MEMORY")
+                    || n.equals("ACTIVEMQ_ISSUE")).findFirst().orElseThrow();
             String quote = switch (s) {
-                case DB_CONNECTION_REFUSED -> "Connection refused";
-                case OUT_OF_MEMORY -> "OutOfMemoryError";
-                case ACTIVEMQ_ISSUE -> "ActiveMQ";
+                case "DB_CONNECTION_REFUSED" -> "Connection refused";
+                case "OUT_OF_MEMORY" -> "OutOfMemoryError";
+                default -> "ActiveMQ";
             };
             List<String> ids = current.stream().filter(x -> x.excerpt().contains(quote)).map(Evidence::id).toList();
-            return new RcaResult("Likely " + s, List.of(new Finding("Evidence shows " + s, s.name(), ids, List.of(quote),
+            return new RcaResult("Likely " + s, List.of(new Finding("Evidence shows " + s, s, ids, List.of(quote),
                     Confidence.HIGH)), List.of("Manually confirm " + s + " with the owning team"), List.of());
         }
     }
@@ -205,6 +205,41 @@ class AgentEndToEndIT {
         assertThat(r.rejectedClaims()).isNotEmpty();
         assertThat(r.rejectedClaims().get(0).reason()).contains("quoted term not found");
         assertThat(r.summary()).doesNotContain("Heap exhausted");
+    }
+
+    /** Model that picks its own category label and quotes real evidence, like a model facing an error no signature covers. */
+    static final class LabellingLlm extends ScriptedLlm {
+        private final String label;
+        private final String quote;
+
+        LabellingLlm(String label, String quote) {
+            super(false);
+            this.label = label;
+            this.quote = quote;
+        }
+
+        @Override
+        public RcaResult analyzeRootCause(String q, List<Evidence> current, List<Evidence> kb, List<String> sc, List<String> rej) {
+            List<String> ids = current.stream().filter(x -> x.excerpt().contains(quote)).map(Evidence::id).toList();
+            return new RcaResult("Cause: " + label, List.of(new Finding("Evidence shows " + label, label, ids, List.of(quote),
+                    Confidence.MEDIUM)), List.of("Manually confirm with the owning team"), List.of());
+        }
+    }
+
+    @Test
+    void anErrorNoSignatureCoversIsStillAnalysedAndVerified() throws Exception {
+        logChunk("n1", "ERROR partner-service failing error: java.lang.NumberFormatException: For input string: \"12a\" in quota parser");
+        IncidentReport r = run(new LabellingLlm("invalid input", "NumberFormatException"), "partner-service failing with error, what happened?");
+        assertThat(r.outcome()).isEqualTo(Outcome.FINDINGS_VERIFIED);
+        assertThat(r.verifiedFindings()).singleElement().satisfies(f -> assertThat(f.category()).isEqualTo("INVALID_INPUT"));
+    }
+
+    @Test
+    void aKnownLabelOnEvidenceWithoutItsSignatureIsRejectedEvenWhenTheQuoteIsReal() throws Exception {
+        logChunk("n2", "ERROR partner-service failing error: java.lang.NumberFormatException: For input string: \"12a\" in quota parser");
+        IncidentReport r = run(new LabellingLlm("OUT_OF_MEMORY", "NumberFormatException"), "partner-service failing with error, what happened?");
+        assertThat(r.outcome()).isEqualTo(Outcome.INSUFFICIENT_EVIDENCE);
+        assertThat(r.rejectedClaims().get(0).reason()).contains("OUT_OF_MEMORY").contains("signature absent");
     }
 
     @Test

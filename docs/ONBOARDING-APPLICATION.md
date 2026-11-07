@@ -51,7 +51,14 @@ class PaymentsLogMapper implements LogEventMapper {
 
 ## 5. Other parts that are application-specific
 * **Runbooks** are ingested per deployment (`POST /api/v1/knowledge`); use this application's runbooks.
-* **Scenario signatures** in the evidence verifier (DB_CONNECTION_REFUSED, OUT_OF_MEMORY, ACTIVEMQ_ISSUE) are DPI-specific and are **not** configurable yet; for another application they simply never trigger.
+* **Failure signatures** (`dpi.agent.signatures`) do not limit what can be analysed. The model labels each finding with an UPPER_SNAKE_CASE category of its own choosing; only a label equal to a configured signature name is cross-checked (that signature must match the cited current evidence). Everything else is verified by the generic rules: cited retrieved evidence, at least one current observation, quoted terms found verbatim. The built-ins (DB_CONNECTION_REFUSED, OUT_OF_MEMORY, ACTIVEMQ_ISSUE, UPSTREAM_CONNECTION_RESET, TIMEOUT, DNS_RESOLUTION, DISK_FULL, TLS_FAILURE, AUTH_FAILURE, NULL_POINTER) can be extended or replaced:
+  ```yaml
+  dpi.agent.signatures:
+    builtin: true                       # false = only your own
+    custom:
+      - { name: QUOTA_EXCEEDED, pattern: "(?i)quota (exceeded|reached)" }   # same name as a built-in replaces it
+  ```
+  Invalid patterns stop the service at startup.
 * **Masking**: review the rules against that application's logs (`dpi.masking.*`); masking is fail-closed but only knows the patterns it has.
 * `ingestion.min-level`, `lookback`, `retention` are per deployment.
 

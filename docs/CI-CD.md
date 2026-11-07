@@ -7,7 +7,7 @@ GitHub Actions**, and the Docker build/push steps have never executed (no Docker
 ## Pipeline (`.github/workflows/ci.yml`)
 | Job | Runs on | What it does |
 |---|---|---|
-| `test` | every push / PR | `mvn verify` against a `pgvector/pgvector:pg16` service container (all 110 tests incl. full-context and end-to-end); fails if any test was skipped, so a missing database cannot pass silently |
+| `test` | every push / PR | `mvn verify` against a `pgvector/pgvector:pg16` service container (all 158 tests incl. full-context and end-to-end); fails if any test was skipped, so a missing database cannot pass silently |
 | `chart` | every push / PR | `helm lint`, renders two configurations, validates against Kubernetes 1.30 schemas with kubeconform (checksum-pinned download) |
 | `image` | after `test` + `chart` | builds the image, scans it with Trivy (fails on fixable CRITICAL), and **pushes to Docker Hub only on `main` and `v*` tags** (never on pull requests) |
 
